@@ -1,0 +1,264 @@
+You are an expert full-stack engineer.
+Develop a complete HR Management System (HRM) for a compounding pharmacy company named EmeraldRx.
+
+The system will manage employees, licenses, training compliance, scheduling, incidents, onboarding, and overall HR workflows.
+
+You may choose the most efficient and modern tech stack, but the frontend UI must use ShadCN or a similar modern component library.
+
+Build clean, scalable, maintainable code following best practices.
+
+🎯 SYSTEM GOAL
+
+A full HR Management System designed for a heavily regulated pharmacy environment.
+Must support compliance tracking, training, role-based access, and internal operations.
+
+🟩 CORE FEATURES TO IMPLEMENT
+1. Employee Management
+
+Create, view, edit, deactivate employees
+
+Employee details: personal info, contact, emergency contacts, role, department
+
+Upload documents (licenses, certificates, policies)
+
+2. License & Certification Tracking
+
+The pharmacy requires strict tracking of:
+
+Pharmacist & pharmacy technician licenses
+
+License numbers, states, issue/expiry
+
+License expiry reminders
+
+Training certifications (HIPAA, compounding, waste management)
+
+Upload license PDF/image
+
+Automatic reminders at 30/60/90 days
+
+3. Training & Compliance Tracking
+
+Training modules (HIPAA, safety, pharmacy SOPs)
+
+Assign training to employees
+
+Track training completion
+
+Upload SOPs / policies
+
+Employee must digitally acknowledge policies
+
+Show overdue / pending training on dashboard
+
+4. Shift Scheduling & Attendance
+
+Create shifts (daily/weekly)
+
+Assign employees to shifts
+
+Calendar-based UI
+
+Detect scheduling conflicts
+
+Employee shift view
+
+Attendance tracking (clock-in/out optional)
+
+5. Leave & Absence Management
+
+PTO request
+
+Sick leave
+
+Unpaid leave
+
+Manager approval workflow
+
+Show balances & history
+
+6. Recruitment & Onboarding
+
+Add new hire
+
+Upload credentials during onboarding
+
+Onboarding tasks checklist:
+
+HIPAA training
+
+SOP acknowledgments
+
+License verification
+
+Access setup
+
+Track status of each onboarding task
+
+7. Performance Evaluations
+
+(Simple but functional)
+
+Quarterly/annual review forms
+
+Manager notes
+
+Ratings & goals
+
+Attach documents if needed
+
+8. Incident & Corrective Action Logging
+
+For HIPAA, safety, and medication-related events:
+
+Create incident report
+
+Assign responsible employee
+
+Add corrective action tasks
+
+Status tracking (Open → In Progress → Closed)
+
+9. Role-Based Access Control
+
+Create roles:
+
+HR Admin
+
+Compliance Officer
+
+Pharmacy Manager
+
+Department Manager
+
+Employee (self-service)
+
+Permissions:
+
+Who can view/edit employee records
+
+Who can approve leave
+
+Who can manage training
+
+Who can log or review incidents
+
+10. Dashboard & Notifications
+
+Dashboard must show:
+
+Pending approvals
+
+License expiries
+
+Training overdue
+
+Incidents requiring review
+
+Upcoming shifts
+
+Notifications:
+
+Email + in-app alerts
+
+Auto reminders for licenses, training, leave approvals
+
+🟧 FRONTEND REQUIREMENTS
+
+Use ShadCN UI or a similar modern component library
+
+Clean, simple, pharmacy-compliant design
+
+Light/dark mode optional
+
+Responsive/mobile-friendly interface
+
+Use modular UI components (cards, tables, modals, forms, alerts, drawers, paginated lists)
+
+🟪 BACKEND REQUIREMENTS
+
+Build modular, well-structured backend
+
+RESTful API or Full-stack MVC allowed
+
+Implement validation layers
+
+Use clean architecture principles
+
+Create reusable services for:
+
+Training assignment logic
+
+License expiry scheduler
+
+Notifications
+
+Policy acknowledgment tracking
+
+🟨 DATABASE STRUCTURE (Define Models & Relationships)
+
+Create the following core tables/models:
+
+Employees
+
+Departments
+
+Roles
+
+Employee_Roles (if many-to-many)
+
+Licenses
+
+Trainings
+
+Employee_Training_Records
+
+Policies
+
+Employee_Policy_Acks
+
+Shifts
+
+Shift_Assignments
+
+Leave_Requests
+
+Incidents
+
+Corrective_Actions
+
+Onboarding_Tasks
+
+Employee_Onboarding_Tasks
+
+Notifications
+
+Cursor should design an optimal schema and relationships.
+
+🟫 DELIVERABLES
+
+Cursor must generate:
+
+✔ Full project structure
+✔ Backend logic + controllers/API routes
+✔ Frontend UI pages using ShadCN components
+✔ Models + migrations (if applicable)
+✔ Dashboard + role-based layouts
+✔ Notifications system
+✔ Seed data (roles + departments)
+✔ Clean reusable UI components
+🟩 DEVELOPMENT GUIDELINES FOR CURSOR
+
+Write production-grade, secure code
+
+Comment important functions
+
+Use professional naming conventions
+
+Confirm before overwriting files
+
+Generate code in logical modules
+
+Follow best practices for authentication, validation, and architecture
+
+✔ END OF PROMPT
