@@ -17,8 +17,8 @@ import {
   Settings,
 } from "lucide-react";
 import { getLogoUrl } from "@/lib/logo-storage";
-import { getSidebarTheme, type SidebarTheme } from "@/lib/sidebar-theme";
-import { getThemeSync } from "@/lib/sidebar-theme-sync";
+import { getSidebarTheme, type SidebarTheme, defaultTheme } from "@/lib/sidebar-theme";
+import { getThemeSync, getLogoUrlSync } from "@/lib/sidebar-theme-sync";
 
 // Helper to convert hex to rgba
 function hexToRgba(hex: string, alpha: number = 1): string {
@@ -52,18 +52,32 @@ const navigation = [
 
 export function Navigation() {
   const pathname = usePathname();
+  // Initialize with default values to prevent hydration mismatch
+  // Will be updated by useEffect on client-side
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  // Initialize with default theme to prevent flash
-  const [theme, setTheme] = useState<SidebarTheme>(getThemeSync);
+  const [theme, setTheme] = useState<SidebarTheme>(defaultTheme);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // Load theme from database
+    // Mark as mounted to prevent hydration mismatch
+    setMounted(true);
+    
+    // Load theme from blocking script or API
     const loadTheme = async () => {
       try {
+        // First try blocking script (synchronous)
+        const blockingTheme = getThemeSync();
+        if (blockingTheme && blockingTheme !== defaultTheme) {
+          setTheme(blockingTheme);
+          const navElement = document.querySelector('nav[data-sidebar]') as HTMLElement;
+          if (navElement) {
+            navElement.style.backgroundColor = blockingTheme.backgroundColor;
+          }
+        }
+        
+        // Then fetch from API to ensure we have latest
         const savedTheme = await getSidebarTheme();
         setTheme(savedTheme);
-        
-        // Apply theme to the nav element immediately to prevent flash
         const navElement = document.querySelector('nav[data-sidebar]') as HTMLElement;
         if (navElement) {
           navElement.style.backgroundColor = savedTheme.backgroundColor;
@@ -73,11 +87,16 @@ export function Navigation() {
       }
     };
     
-    loadTheme();
-    
-    // Load logo from database
+    // Load logo from blocking script or API
     const loadLogo = async () => {
       try {
+        // First try blocking script (synchronous)
+        const blockingLogo = getLogoUrlSync();
+        if (blockingLogo !== null) {
+          setLogoUrl(blockingLogo);
+        }
+        
+        // Then fetch from API to ensure we have latest
         const logo = await getLogoUrl();
         setLogoUrl(logo);
       } catch (error) {
@@ -85,6 +104,7 @@ export function Navigation() {
       }
     };
     
+    loadTheme();
     loadLogo();
 
     // Listen for custom events (for same-tab updates)

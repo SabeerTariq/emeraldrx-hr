@@ -26,10 +26,24 @@ async function migrate() {
     
     // Split by semicolon and execute each statement
     // Filter out comments and empty statements
-    const statements = sql
+    // Remove single-line comments (-- ...) and multi-line comments (/* ... */)
+    let cleanedSql = sql
+      .replace(/\/\*[\s\S]*?\*\//g, '') // Remove multi-line comments
+      .split('\n')
+      .map(line => {
+        // Remove inline comments (-- ...)
+        const commentIndex = line.indexOf('--');
+        if (commentIndex >= 0) {
+          return line.substring(0, commentIndex);
+        }
+        return line;
+      })
+      .join('\n');
+    
+    const statements = cleanedSql
       .split(";")
       .map((s) => s.trim())
-      .filter((s) => s.length > 0 && !s.startsWith("--"));
+      .filter((s) => s.length > 0 && s.length > 10); // Filter out very short strings (likely empty/whitespace)
 
     console.log(`📝 Executing ${statements.length} SQL statements...`);
 
@@ -58,7 +72,11 @@ async function migrate() {
 }
 
 // Run migration if called directly
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Check if this file is being run directly (not imported)
+const isMainModule = import.meta.url === `file://${process.argv[1]?.replace(/\\/g, '/')}` || 
+                     process.argv[1]?.includes('migrate.ts');
+
+if (isMainModule || import.meta.url.endsWith('migrate.ts')) {
   migrate()
     .then(() => process.exit(0))
     .catch((error) => {

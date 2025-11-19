@@ -26,8 +26,68 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
-                // Theme is now loaded from database via API
-                // This script will be removed in favor of API-based loading
+                // Blocking script to load theme and logo before React hydrates
+                // This prevents flash of default values on page refresh
+                try {
+                  var themeLoaded = false;
+                  var logoLoaded = false;
+                  
+                  // Determine API URL
+                  var apiUrl = 'http://localhost:5000';
+                  if (window.location.origin.includes('localhost:3000')) {
+                    apiUrl = 'http://localhost:5000';
+                  } else if (window.location.origin) {
+                    // In production, use same origin or configured API URL
+                    apiUrl = window.location.origin;
+                  }
+                  
+                  // Fetch theme synchronously
+                  var themeXhr = new XMLHttpRequest();
+                  themeXhr.open('GET', apiUrl + '/api/settings/sidebar_theme', false);
+                  themeXhr.send();
+                  
+                  if (themeXhr.status === 200) {
+                    var themeData = JSON.parse(themeXhr.responseText);
+                    if (themeData.success && themeData.data) {
+                      window.__SIDEBAR_THEME__ = themeData.data;
+                      themeLoaded = true;
+                      
+                      // Apply theme immediately to prevent flash
+                      var nav = document.querySelector('nav[data-sidebar]');
+                      if (nav) {
+                        nav.style.backgroundColor = themeData.data.backgroundColor || '#ffffff';
+                      }
+                    }
+                  }
+                  
+                  // Fetch logo synchronously
+                  var logoXhr = new XMLHttpRequest();
+                  logoXhr.open('GET', apiUrl + '/api/settings/sidebar_logo', false);
+                  logoXhr.send();
+                  
+                  if (logoXhr.status === 200) {
+                    var logoData = JSON.parse(logoXhr.responseText);
+                    if (logoData.success) {
+                      window.__SIDEBAR_LOGO__ = logoData.data;
+                      logoLoaded = true;
+                    }
+                  }
+                  
+                  // Set flags
+                  window.__SIDEBAR_THEME_LOADED__ = themeLoaded;
+                  window.__SIDEBAR_LOGO_LOADED__ = logoLoaded;
+                } catch (e) {
+                  // If API fails, use defaults
+                  window.__SIDEBAR_THEME__ = {
+                    backgroundColor: '#ffffff',
+                    textColor: '#6b7280',
+                    activeColor: '#22c55e',
+                    activeTextColor: '#ffffff'
+                  };
+                  window.__SIDEBAR_LOGO__ = null;
+                  window.__SIDEBAR_THEME_LOADED__ = false;
+                  window.__SIDEBAR_LOGO_LOADED__ = false;
+                }
               })();
             `,
           }}

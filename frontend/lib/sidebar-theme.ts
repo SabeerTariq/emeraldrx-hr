@@ -12,7 +12,7 @@ export interface SidebarTheme {
   activeTextColor: string;
 }
 
-const defaultTheme: SidebarTheme = {
+export const defaultTheme: SidebarTheme = {
   backgroundColor: "#ffffff",
   textColor: "#6b7280",
   activeColor: "#22c55e",

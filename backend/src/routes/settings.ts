@@ -48,10 +48,25 @@ router.get("/:key", async (req, res) => {
     
     const settingValue = results[0].settingValue;
     // If it's a JSON string, parse it; otherwise return as-is
-    const value = typeof settingValue === "string" ? JSON.parse(settingValue) : settingValue;
+    let value;
+    try {
+      value = typeof settingValue === "string" ? JSON.parse(settingValue) : settingValue;
+    } catch (parseError) {
+      // If JSON parsing fails, return the raw value
+      value = settingValue;
+    }
     
     res.json({ success: true, data: value });
   } catch (error: any) {
+    console.error(`Error fetching setting ${req.params.key}:`, error);
+    // Check if it's a table doesn't exist error
+    if (error.code === "ER_NO_SUCH_TABLE" || error.message?.includes("doesn't exist")) {
+      console.error("⚠️  system_settings table does not exist. Please run: npm run db:migrate");
+      return res.status(500).json({ 
+        success: false, 
+        error: "Database table not found. Please run database migration: npm run db:migrate" 
+      });
+    }
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -65,7 +80,8 @@ router.put("/:key", async (req, res) => {
     const { key } = req.params;
     const { value, description } = req.body;
     
-    if (!value) {
+    // Allow null values (for logo removal), but reject undefined
+    if (value === undefined) {
       return res.status(400).json({ success: false, error: "Value is required" });
     }
     
@@ -103,6 +119,15 @@ router.put("/:key", async (req, res) => {
     
     res.json({ success: true, data: value });
   } catch (error: any) {
+    console.error(`Error updating setting ${req.params.key}:`, error);
+    // Check if it's a table doesn't exist error
+    if (error.code === "ER_NO_SUCH_TABLE" || error.message?.includes("doesn't exist")) {
+      console.error("⚠️  system_settings table does not exist. Please run: npm run db:migrate");
+      return res.status(500).json({ 
+        success: false, 
+        error: "Database table not found. Please run database migration: npm run db:migrate" 
+      });
+    }
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -119,14 +144,27 @@ router.get("/", async (req, res) => {
     
     const settings: Record<string, any> = {};
     results.forEach((row: any) => {
-      const value = typeof row.settingValue === "string" 
-        ? JSON.parse(row.settingValue) 
-        : row.settingValue;
-      settings[row.settingKey] = value;
+      try {
+        const value = typeof row.settingValue === "string" 
+          ? JSON.parse(row.settingValue) 
+          : row.settingValue;
+        settings[row.settingKey] = value;
+      } catch (parseError) {
+        settings[row.settingKey] = row.settingValue;
+      }
     });
     
     res.json({ success: true, data: settings });
   } catch (error: any) {
+    console.error("Error fetching all settings:", error);
+    // Check if it's a table doesn't exist error
+    if (error.code === "ER_NO_SUCH_TABLE" || error.message?.includes("doesn't exist")) {
+      console.error("⚠️  system_settings table does not exist. Please run: npm run db:migrate");
+      return res.status(500).json({ 
+        success: false, 
+        error: "Database table not found. Please run database migration: npm run db:migrate" 
+      });
+    }
     res.status(500).json({ success: false, error: error.message });
   }
 });

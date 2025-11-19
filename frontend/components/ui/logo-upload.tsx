@@ -47,7 +47,7 @@ export function LogoUpload({ onLogoChange }: LogoUploadProps) {
       });
       return response.data.data;
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       // Construct full URL to backend
       // Use environment variable or default to localhost:5000
       const backendUrl = typeof window !== "undefined" 
@@ -60,18 +60,23 @@ export function LogoUpload({ onLogoChange }: LogoUploadProps) {
         ? data.url 
         : `${backendUrl}${data.url}`;
       
-      // Save to database
-      await setLogoUrl(logoUrl);
-      setCurrentLogo(logoUrl);
-      toast.success("Logo uploaded successfully");
-      
-      if (onLogoChange) {
-        onLogoChange(logoUrl);
-      }
-      setSelectedFile(null);
-      setPreview(null);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
+      try {
+        // Save to database
+        await setLogoUrl(logoUrl);
+        setCurrentLogo(logoUrl);
+        toast.success("Logo uploaded successfully");
+        
+        if (onLogoChange) {
+          onLogoChange(logoUrl);
+        }
+        setSelectedFile(null);
+        setPreview(null);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+      } catch (error) {
+        console.error("Failed to save logo to database:", error);
+        toast.error("Logo uploaded but failed to save to database");
       }
     },
     onError: (error: any) => {
