@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "start": "next start -p 1206",
     "lint": "next lint",
     "type-check": "tsc --noEmit"
   },
