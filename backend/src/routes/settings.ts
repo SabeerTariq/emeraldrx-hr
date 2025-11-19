@@ -27,7 +27,7 @@ router.get("/:key", async (req, res) => {
     const results = await query(
       `SELECT settingValue FROM system_settings WHERE settingKey = ?`,
       [key]
-    );
+    ) as any[];
     
     if (results.length === 0) {
       // Return default values if not found
@@ -98,7 +98,7 @@ router.put("/:key", async (req, res) => {
     const existing = await query(
       `SELECT id FROM system_settings WHERE settingKey = ?`,
       [key]
-    );
+    ) as any[];
     
     if (existing.length > 0) {
       // Update existing
@@ -140,7 +140,7 @@ router.get("/", async (req, res) => {
   try {
     const results = await query(
       `SELECT settingKey, settingValue, description FROM system_settings`
-    );
+    ) as any[];
     
     const settings: Record<string, any> = {};
     results.forEach((row: any) => {

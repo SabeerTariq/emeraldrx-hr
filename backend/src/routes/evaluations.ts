@@ -32,7 +32,7 @@ router.get("/", async (req, res) => {
     
     sql += " ORDER BY pe.createdAt DESC";
     
-    const evaluations = await query(sql, params);
+    const evaluations = await query(sql, params) as any[];
     res.json({ success: true, data: evaluations });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -47,7 +47,7 @@ router.post("/", async (req, res) => {
   try {
     const { employeeId, period, evaluatorId, ratings, goals, notes, documentUrl } = req.body;
     
-    const [result] = await query(
+    const result = await query(
       `INSERT INTO performance_evaluations (id, employeeId, period, evaluatorId, ratings, goals, notes, documentUrl, createdAt, updatedAt)
        VALUES (UUID(), ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
       [
@@ -59,9 +59,9 @@ router.post("/", async (req, res) => {
         notes || null,
         documentUrl || null
       ]
-    );
+    ) as any;
     
-    res.json({ success: true, data: { id: (result as any).insertId } });
+    res.json({ success: true, data: { id: result.insertId } });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }

@@ -28,7 +28,7 @@ router.get("/", async (req, res) => {
       LEFT JOIN roles r ON er.roleId = r.id
       GROUP BY e.id
       ORDER BY e.employeeId
-    `);
+    `) as any[];
     
     res.json({ success: true, data: employees });
   } catch (error: any) {
@@ -53,7 +53,7 @@ router.get("/:id", async (req, res) => {
       LEFT JOIN roles r ON er.roleId = r.id
       WHERE e.id = ?
       GROUP BY e.id
-    `, [req.params.id]);
+    `, [req.params.id]) as any[];
     
     if (Array.isArray(employee) && employee.length === 0) {
       return res.status(404).json({ success: false, error: "Employee not found" });

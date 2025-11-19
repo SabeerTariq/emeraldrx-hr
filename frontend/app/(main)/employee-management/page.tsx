@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -8,17 +8,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { EmployeeModal } from "@/components/modals/EmployeeModal";
 import { NewHireModal } from "@/components/modals/NewHireModal";
-import { Plus, Pencil, UserPlus } from "lucide-react";
+import { Pencil, UserPlus } from "lucide-react";
 
 export default function EmployeesPage() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isNewHireModalOpen, setIsNewHireModalOpen] = useState(false);
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
-
-  // When editing, use EmployeeModal; when adding new, use NewHireModal
-  const handleAdd = () => {
-    setIsNewHireModalOpen(true);
-  };
+  // State declarations (must be before early returns for linter)
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [isNewHireModalOpen, setIsNewHireModalOpen] = React.useState(false);
+  const [selectedEmployeeId, setSelectedEmployeeId] = React.useState<string | null>(null);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["employees"],

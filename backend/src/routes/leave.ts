@@ -43,7 +43,7 @@ router.get("/", async (req, res) => {
     
     sql += " ORDER BY lr.createdAt DESC";
     
-    const leaves = await query(sql, params);
+    const leaves = await query(sql, params) as any[];
     res.json({ success: true, data: leaves });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -58,13 +58,13 @@ router.post("/", async (req, res) => {
   try {
     const { employeeId, type, startDate, endDate, reason } = req.body;
     
-    const [result] = await query(
+    const result = await query(
       `INSERT INTO leave_requests (id, employeeId, type, startDate, endDate, reason, status, createdAt, updatedAt)
        VALUES (UUID(), ?, ?, ?, ?, ?, 'pending', NOW(), NOW())`,
       [employeeId, type, startDate, endDate, reason || null]
-    );
+    ) as any;
     
-    res.json({ success: true, data: { id: (result as any).insertId } });
+    res.json({ success: true, data: { id: result.insertId } });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }

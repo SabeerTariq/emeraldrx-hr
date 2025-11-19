@@ -48,7 +48,7 @@ router.get("/", async (req, res) => {
     
     sql += " ORDER BY i.reportedAt DESC";
     
-    const incidents = await query(sql, params);
+    const incidents = await query(sql, params) as any[];
     res.json({ success: true, data: incidents });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -63,7 +63,7 @@ router.get("/:id", async (req, res) => {
   try {
     const { id } = req.params;
     
-    const [incident] = await query(`
+    const incident = await query(`
       SELECT 
         i.*,
         e.firstName,
@@ -75,7 +75,7 @@ router.get("/:id", async (req, res) => {
       LEFT JOIN employees e ON i.employeeId = e.id
       JOIN employees reporter ON i.reportedBy = reporter.id
       WHERE i.id = ?
-    `, [id]);
+    `, [id]) as any[];
     
     const correctiveActions = await query(`
       SELECT 
@@ -87,12 +87,16 @@ router.get("/:id", async (req, res) => {
       JOIN employees e ON ca.employeeId = e.id
       WHERE ca.incidentId = ?
       ORDER BY ca.dueDate
-    `, [id]);
+    `, [id]) as any[];
+    
+    if (incident.length === 0) {
+      return res.status(404).json({ success: false, error: "Incident not found" });
+    }
     
     res.json({ 
       success: true, 
       data: { 
-        ...incident, 
+        ...incident[0], 
         correctiveActions 
       } 
     });
@@ -109,13 +113,13 @@ router.post("/", async (req, res) => {
   try {
     const { type, title, description, employeeId, reportedBy, severity, occurredAt } = req.body;
     
-    const [result] = await query(
+    const result = await query(
       `INSERT INTO incidents (id, type, title, description, employeeId, reportedBy, severity, status, occurredAt, reportedAt, createdAt, updatedAt)
        VALUES (UUID(), ?, ?, ?, ?, ?, ?, 'open', ?, NOW(), NOW(), NOW())`,
       [type, title, description, employeeId || null, reportedBy, severity || 'low', occurredAt]
-    );
+    ) as any;
     
-    res.json({ success: true, data: { id: (result as any).insertId } });
+    res.json({ success: true, data: { id: result.insertId } });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -160,13 +164,13 @@ router.post("/:id/corrective-actions", async (req, res) => {
     const { id } = req.params;
     const { employeeId, title, description, dueDate } = req.body;
     
-    const [result] = await query(
+    const result = await query(
       `INSERT INTO corrective_actions (id, incidentId, employeeId, title, description, dueDate, status, createdAt, updatedAt)
        VALUES (UUID(), ?, ?, ?, ?, ?, 'pending', NOW(), NOW())`,
       [id, employeeId, title, description, dueDate]
-    );
+    ) as any;
     
-    res.json({ success: true, data: { id: (result as any).insertId } });
+    res.json({ success: true, data: { id: result.insertId } });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }

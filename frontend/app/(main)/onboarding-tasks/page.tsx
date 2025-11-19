@@ -5,11 +5,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, CheckCircle2, Clock, XCircle } from "lucide-react";
+import { Plus } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { NewHireModal } from "@/components/modals/NewHireModal";
@@ -47,17 +45,6 @@ export default function OnboardingPage() {
   const employees = employeesData || [];
   const tasks = tasksData || [];
   const employeeTasks = employeeTasksData || [];
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "completed":
-        return <CheckCircle2 className="h-5 w-5 text-green-500" />;
-      case "in_progress":
-        return <Clock className="h-5 w-5 text-blue-500" />;
-      default:
-        return <XCircle className="h-5 w-5 text-gray-400" />;
-    }
-  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {

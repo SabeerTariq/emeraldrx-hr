@@ -56,11 +56,8 @@ export function Navigation() {
   // Will be updated by useEffect on client-side
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [theme, setTheme] = useState<SidebarTheme>(defaultTheme);
-  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // Mark as mounted to prevent hydration mismatch
-    setMounted(true);
     
     // Load theme from blocking script or API
     const loadTheme = async () => {

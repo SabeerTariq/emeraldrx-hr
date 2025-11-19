@@ -1,0 +1,5 @@
+---
+alwaysApply: true
+---
+For reading, writing and editing the database
+Use the command: mysql -u root (database_name)

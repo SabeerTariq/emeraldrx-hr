@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -18,7 +18,7 @@ interface LicenseModalProps {
   licenseId?: string | null;
 }
 
-export function LicenseModal({ open, onOpenChange, employeeId, licenseId }: LicenseModalProps) {
+export function LicenseModal({ open, onOpenChange, employeeId, licenseId: _licenseId }: LicenseModalProps) {
   const [formData, setFormData] = useState({
     employeeId: employeeId || "",
     type: "Pharmacist",
@@ -28,7 +28,7 @@ export function LicenseModal({ open, onOpenChange, employeeId, licenseId }: Lice
     expiryDate: "",
   });
 
-  const isEdit = !!licenseId;
+  // const isEdit = !!licenseId; // Reserved for future edit functionality
   const queryClient = useQueryClient();
 
   // Fetch employees if no employeeId provided
@@ -153,7 +153,7 @@ export function LicenseModal({ open, onOpenChange, employeeId, licenseId }: Lice
               label="Upload License Document (Optional)"
               accept="image/*,.pdf"
               maxSize={10}
-              onUploadComplete={(fileData) => {
+              onUploadComplete={(_fileData) => {
                 // File uploaded, can be associated with license after creation
                 toast.success("Document uploaded");
               }}

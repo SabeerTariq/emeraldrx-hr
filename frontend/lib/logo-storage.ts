@@ -80,6 +80,6 @@ export async function removeLogo(): Promise<void> {
 
 // Synchronous version for initial render (uses cache)
 export function getLogoUrlSync(): string | null {
-  return logoCache;
+  return logoCache ?? null;
 }
 

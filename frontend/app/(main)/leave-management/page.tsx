@@ -18,7 +18,6 @@ import { toast } from "sonner";
 
 export default function LeavePage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
     queryKey: ["leave-requests"],

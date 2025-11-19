@@ -38,7 +38,7 @@ export async function getSidebarTheme(): Promise<SidebarTheme> {
       const response = await api.get("/settings/sidebar_theme");
       const theme = response.data.data || defaultTheme;
       themeCache = { ...defaultTheme, ...theme };
-      return themeCache;
+      return themeCache || defaultTheme;
     } catch (error) {
       console.error("Failed to fetch sidebar theme:", error);
       return defaultTheme;

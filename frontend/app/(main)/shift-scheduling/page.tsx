@@ -12,13 +12,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Calendar as CalendarIcon } from "lucide-react";
+import { Plus } from "lucide-react";
 import { format } from "date-fns";
 
 export default function SchedulingPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const queryClient = useQueryClient();
 
   // Fetch shifts
   const { data: shiftsData, isLoading } = useQuery({

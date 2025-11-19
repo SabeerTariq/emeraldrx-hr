@@ -34,7 +34,7 @@ router.get("/shifts", async (req, res) => {
     
     sql += ` GROUP BY s.id ORDER BY s.date, s.startTime`;
     
-    const shifts = await query(sql, params);
+    const shifts = await query(sql, params) as any[];
     res.json({ success: true, data: shifts });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -69,7 +69,7 @@ router.get("/conflicts", async (req, res) => {
       startTime, startTime,
       endTime, endTime,
       startTime, endTime
-    ]);
+    ]) as any[];
     
     res.json({ success: true, data: conflicts, hasConflict: conflicts.length > 0 });
   } catch (error: any) {

@@ -116,7 +116,7 @@ export function SidebarColorPicker() {
         <div>
           <h3 className="text-lg font-semibold">Sidebar Colors</h3>
           <p className="text-sm text-muted-foreground">
-            Customize the appearance of the sidebar. Changes are previewed in real-time. Click "Apply Changes" to save to database.
+            Customize the appearance of the sidebar. Changes are previewed in real-time. Click &quot;Apply Changes&quot; to save to database.
           </p>
         </div>
         <div className="flex gap-2">

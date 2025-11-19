@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,6 @@ import { ManualLogoSetter } from "@/components/ui/manual-logo-setter";
 import { SidebarColorPicker } from "@/components/ui/sidebar-color-picker";
 
 export default function SettingsPage() {
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
   return (
     <div className="container mx-auto p-6">
@@ -70,7 +69,7 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div>
-                <LogoUpload onLogoChange={(url) => setLogoUrl(url)} />
+                <LogoUpload onLogoChange={() => {}} />
                 <div className="pt-4 border-t mt-4">
                   <p className="text-sm text-muted-foreground mb-4">
                     The logo will appear in the sidebar header. Supported formats: PNG, JPG, SVG. 
