@@ -4,10 +4,31 @@ import axios from "axios";
  * API client configuration
  * Centralized axios instance for API calls
  */
+const getApiBaseURL = () => {
+  // Always check environment variable first (set at build time)
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  
+  // In browser
+  if (typeof window !== "undefined") {
+    // In development, use localhost
+    if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+      return "http://localhost:5000/api";
+    }
+    
+    // In production/staging without env var, use relative URL
+    // This assumes API is proxied via Next.js rewrites (see next.config.js)
+    // If backend is on different server, you MUST set NEXT_PUBLIC_API_URL
+    return "/api";
+  }
+  
+  // Server-side: default to localhost
+  return "http://localhost:5000/api";
+};
+
 const api = axios.create({
-  baseURL: typeof window !== "undefined" 
-    ? (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api")
-    : "http://localhost:5000/api",
+  baseURL: getApiBaseURL(),
   headers: {
     "Content-Type": "application/json",
   },

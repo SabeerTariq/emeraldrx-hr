@@ -22,8 +22,37 @@ const PORT = process.env.PORT || 5000;
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
 })); // Security headers
+
+// CORS configuration - allow multiple origins in development
+const allowedOrigins = process.env.NODE_ENV === "production"
+  ? [process.env.FRONTEND_URL || "http://localhost:3000"]
+  : [
+      "http://localhost:3000",
+      "http://localhost:1206",
+      "http://localhost:3001",
+      process.env.FRONTEND_URL,
+    ].filter(Boolean);
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:3000",
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // In development, allow common localhost ports
+    if (process.env.NODE_ENV === "development") {
+      // Allow any localhost port in development
+      if (origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:")) {
+        return callback(null, true);
+      }
+    }
+    
+    // Check against allowed origins list
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
   credentials: true,
 }));
 app.use(compression()); // Compress responses
@@ -37,7 +66,16 @@ const uploadsPath = path.join(process.cwd(), "uploads");
 console.log(`📁 Serving uploads from: ${uploadsPath}`);
 
 app.use("/uploads", (req, res, next) => {
-  res.header("Access-Control-Allow-Origin", process.env.FRONTEND_URL || "http://localhost:3000");
+  const origin = req.headers.origin;
+  // In development, allow any localhost origin
+  if (process.env.NODE_ENV === "development" && origin && 
+      (origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:"))) {
+    res.header("Access-Control-Allow-Origin", origin);
+  } else if (origin && allowedOrigins.includes(origin)) {
+    res.header("Access-Control-Allow-Origin", origin);
+  } else {
+    res.header("Access-Control-Allow-Origin", process.env.FRONTEND_URL || "http://localhost:1206");
+  }
   res.header("Access-Control-Allow-Credentials", "true");
   next();
 }, express.static(uploadsPath));
