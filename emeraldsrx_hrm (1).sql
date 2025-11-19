@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 19, 2025 at 12:34 AM
+-- Generation Time: Nov 19, 2025 at 05:29 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -498,7 +498,7 @@ CREATE TABLE `notifications` (
   `isRead` tinyint(1) DEFAULT 0,
   `readAt` datetime DEFAULT NULL,
   `link` text DEFAULT NULL,
-  `metadata` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT json_object() CHECK (json_valid(`metadata`)),
+  `metadata` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
   `createdAt` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -576,8 +576,8 @@ CREATE TABLE `performance_evaluations` (
   `employeeId` varchar(36) NOT NULL,
   `period` varchar(100) NOT NULL,
   `evaluatorId` varchar(36) NOT NULL,
-  `ratings` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT json_object() CHECK (json_valid(`ratings`)),
-  `goals` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT json_array() CHECK (json_valid(`goals`)),
+  `ratings` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
+  `goals` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
   `notes` text DEFAULT NULL,
   `documentUrl` text DEFAULT NULL,
   `createdAt` datetime DEFAULT current_timestamp(),
@@ -638,7 +638,7 @@ CREATE TABLE `roles` (
   `id` varchar(36) NOT NULL,
   `name` varchar(255) NOT NULL,
   `description` text DEFAULT NULL,
-  `permissions` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT json_object() CHECK (json_valid(`permissions`)),
+  `permissions` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
   `createdAt` datetime DEFAULT current_timestamp(),
   `updatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -748,6 +748,29 @@ INSERT INTO `shift_assignments` (`id`, `shiftId`, `employeeId`, `status`, `clock
 ('e8edd7fa-df0b-4a0c-b8b7-b3876bdd8809', '788d19f6-b601-4b10-a820-d3384b62c16e', '3f808a8a-d28b-4170-b749-1c3e5538e952', 'scheduled', NULL, NULL, '2025-11-19 01:05:32', '2025-11-19 01:05:32'),
 ('f31cb3f5-25d9-4963-bfdd-a80169298e58', '2d744327-863d-4a79-b173-00e4dc42f7ea', '71c6818d-8c95-468a-979c-62ff555ad2c7', 'scheduled', NULL, NULL, '2025-11-19 01:05:32', '2025-11-19 01:05:32'),
 ('f93d1b70-95b6-4ca6-a438-0a12867c56f2', '63ffea0e-4be8-44d9-8d13-88f90ac2d81d', '1f9112ef-6dbd-493a-b6ae-47526a04220e', 'scheduled', NULL, NULL, '2025-11-19 01:17:39', '2025-11-19 01:17:39');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `system_settings`
+--
+
+CREATE TABLE `system_settings` (
+  `id` varchar(36) NOT NULL,
+  `settingKey` varchar(255) NOT NULL,
+  `settingValue` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`settingValue`)),
+  `description` text DEFAULT NULL,
+  `createdAt` datetime DEFAULT current_timestamp(),
+  `updatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `system_settings`
+--
+
+INSERT INTO `system_settings` (`id`, `settingKey`, `settingValue`, `description`, `createdAt`, `updatedAt`) VALUES
+('7ea903e4-a37f-4dcb-8ec5-1a92878e1a83', 'sidebar_logo', '\"http://localhost:5000/uploads/file-1763509969246-600908526.png\"', 'Sidebar logo URL', '2025-11-19 04:52:49', '2025-11-19 04:52:49'),
+('a184859d-26fc-4abb-9207-5af7a82849b3', 'sidebar_theme', '{\"backgroundColor\":\"#ffffff\",\"textColor\":\"#6b7280\",\"activeColor\":\"#27bcbb\",\"activeTextColor\":\"#ffffff\"}', 'Sidebar color theme settings', '2025-11-19 04:52:16', '2025-11-19 05:01:19');
 
 -- --------------------------------------------------------
 
@@ -945,6 +968,14 @@ ALTER TABLE `shift_assignments`
   ADD UNIQUE KEY `unique_shift_employee` (`shiftId`,`employeeId`),
   ADD KEY `idx_employeeId` (`employeeId`),
   ADD KEY `idx_shiftId` (`shiftId`);
+
+--
+-- Indexes for table `system_settings`
+--
+ALTER TABLE `system_settings`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `settingKey` (`settingKey`),
+  ADD KEY `idx_settingKey` (`settingKey`);
 
 --
 -- Indexes for table `trainings`
