@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 28, 2025 at 12:23 AM
+-- Generation Time: Nov 28, 2025 at 12:49 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -344,7 +344,7 @@ INSERT INTO `employee_onboarding_tasks` (`id`, `employeeId`, `taskId`, `status`,
 CREATE TABLE `employee_permissions` (
   `id` varchar(36) NOT NULL,
   `employeeId` varchar(36) NOT NULL,
-  `permissions` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT json_object() CHECK (json_valid(`permissions`)),
+  `permissions` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
   `createdAt` datetime DEFAULT current_timestamp(),
   `updatedAt` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
