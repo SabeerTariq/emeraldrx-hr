@@ -10,7 +10,12 @@
     "lint": "eslint src --ext .ts",
     "type-check": "tsc --noEmit",
     "db:migrate": "tsx src/database/migrate.ts",
+    "db:alter": "tsx src/database/alter_tables.ts",
+    "db:remove-training-fields": "tsx src/database/remove-training-fields.ts",
     "db:seed": "tsx src/database/seed.ts",
+    "db:update-roles": "tsx src/database/update-to-new-roles.ts",
+    "db:restructure-roles": "tsx src/database/restructure-roles.ts",
+    "db:seed-dummy": "tsx src/database/seed-dummy-data.ts",
     "test": "vitest"
   },
   "dependencies": {

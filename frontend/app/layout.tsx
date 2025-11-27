@@ -79,13 +79,9 @@ export default function RootLayout({
                   window.__SIDEBAR_THEME_LOADED__ = themeLoaded;
                   window.__SIDEBAR_LOGO_LOADED__ = logoLoaded;
                 } catch (e) {
-                  // If API fails, use defaults
-                  window.__SIDEBAR_THEME__ = {
-                    backgroundColor: '#ffffff',
-                    textColor: '#6b7280',
-                    activeColor: '#22c55e',
-                    activeTextColor: '#ffffff'
-                  };
+                  // If API fails, don't set hardcoded values
+                  // Let React component fetch from database instead
+                  window.__SIDEBAR_THEME__ = null;
                   window.__SIDEBAR_LOGO__ = null;
                   window.__SIDEBAR_THEME_LOADED__ = false;
                   window.__SIDEBAR_LOGO_LOADED__ = false;

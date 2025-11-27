@@ -9,12 +9,19 @@ import { Badge } from "@/components/ui/badge";
 import { EmployeeModal } from "@/components/modals/EmployeeModal";
 import { NewHireModal } from "@/components/modals/NewHireModal";
 import { Pencil, UserPlus } from "lucide-react";
+import { hasPermission, getUserPermissions } from "@/lib/permissions";
 
 export default function EmployeesPage() {
   // State declarations (must be before early returns for linter)
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [isNewHireModalOpen, setIsNewHireModalOpen] = React.useState(false);
   const [selectedEmployeeId, setSelectedEmployeeId] = React.useState<string | null>(null);
+
+  // Fetch user permissions
+  const { data: permissions } = useQuery({
+    queryKey: ["user-permissions"],
+    queryFn: getUserPermissions,
+  });
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["employees"],
@@ -23,6 +30,9 @@ export default function EmployeesPage() {
       return response.data.data;
     },
   });
+
+  const canCreate = permissions && hasPermission(permissions, "employees", "create");
+  const canUpdate = permissions && hasPermission(permissions, "employees", "update");
 
   if (isLoading) {
     return (
@@ -57,10 +67,12 @@ export default function EmployeesPage() {
     <div className="container mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Employee Management</h1>
-        <Button onClick={() => setIsNewHireModalOpen(true)}>
-          <UserPlus className="mr-2 h-4 w-4" />
-          New Hire / Add Employee
-        </Button>
+        {canCreate && (
+          <Button onClick={() => setIsNewHireModalOpen(true)}>
+            <UserPlus className="mr-2 h-4 w-4" />
+            New Hire / Add Employee
+          </Button>
+        )}
       </div>
       
       <div className="bg-card border rounded-lg overflow-hidden">
@@ -71,7 +83,8 @@ export default function EmployeesPage() {
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Department</TableHead>
-              <TableHead>Roles</TableHead>
+              <TableHead>Designation</TableHead>
+              <TableHead>Role</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
@@ -85,6 +98,7 @@ export default function EmployeesPage() {
                 </TableCell>
                 <TableCell className="text-muted-foreground">{employee.email}</TableCell>
                 <TableCell>{employee.departmentName || "N/A"}</TableCell>
+                <TableCell>{employee.designation || "N/A"}</TableCell>
                 <TableCell>{employee.roles || "N/A"}</TableCell>
                 <TableCell>
                   <Badge variant={employee.isActive ? "default" : "secondary"}>
@@ -92,13 +106,15 @@ export default function EmployeesPage() {
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleEdit(employee.id)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
+                  {canUpdate && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEdit(employee.id)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  )}
                 </TableCell>
               </TableRow>
             ))}
@@ -118,7 +134,6 @@ export default function EmployeesPage() {
       <NewHireModal
         open={isNewHireModalOpen}
         onOpenChange={setIsNewHireModalOpen}
-        autoAssignOnboardingTasks={true}
       />
     </div>
   );

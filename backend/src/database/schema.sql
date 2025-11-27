@@ -132,6 +132,9 @@ CREATE TABLE IF NOT EXISTS trainings (
   category VARCHAR(100),
   duration INT,
   isRequired BOOLEAN DEFAULT FALSE,
+  supportsVideo BOOLEAN DEFAULT FALSE,
+  supportsPDF BOOLEAN DEFAULT FALSE,
+  supportsQuiz BOOLEAN DEFAULT FALSE,
   createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
   updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_category (category)
@@ -147,6 +150,7 @@ CREATE TABLE IF NOT EXISTS employee_training_records (
   dueDate DATETIME,
   status VARCHAR(50) DEFAULT 'pending',
   score INT,
+  certificateUrl TEXT,
   notes TEXT,
   createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
   updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -198,10 +202,13 @@ CREATE TABLE IF NOT EXISTS shifts (
   startTime DATETIME NOT NULL,
   endTime DATETIME NOT NULL,
   departmentId VARCHAR(36),
+  role VARCHAR(100),
   notes TEXT,
   createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
   updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  INDEX idx_date (date)
+  INDEX idx_date (date),
+  INDEX idx_departmentId (departmentId),
+  INDEX idx_role (role)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Shift Assignments Table
@@ -232,17 +239,20 @@ CREATE TABLE IF NOT EXISTS leave_requests (
   type VARCHAR(50) NOT NULL,
   startDate DATE NOT NULL,
   endDate DATE NOT NULL,
+  daysRequested DECIMAL(5,2),
   reason TEXT,
   status VARCHAR(50) DEFAULT 'pending',
   approvedBy VARCHAR(36),
   approvedAt DATETIME,
   rejectionReason TEXT,
+  managerComments TEXT,
   createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
   updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (employeeId) REFERENCES employees(id) ON DELETE CASCADE,
   INDEX idx_employeeId (employeeId),
   INDEX idx_status (status),
-  INDEX idx_startDate (startDate)
+  INDEX idx_startDate (startDate),
+  INDEX idx_type (type)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
@@ -383,5 +393,136 @@ CREATE TABLE IF NOT EXISTS notifications (
   INDEX idx_employeeId (employeeId),
   INDEX idx_isRead (isRead),
   INDEX idx_type (type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
+-- PHARMACY LICENSE TABLES
+-- ============================================
+
+-- Pharmacy Licenses Table
+CREATE TABLE IF NOT EXISTS pharmacy_licenses (
+  id VARCHAR(36) PRIMARY KEY,
+  licenseName VARCHAR(255) NOT NULL,
+  licenseNumber VARCHAR(255) NOT NULL,
+  state VARCHAR(100) NOT NULL,
+  issueDate DATE NOT NULL,
+  expirationDate DATE NOT NULL,
+  documentUrl TEXT,
+  isActive BOOLEAN DEFAULT TRUE,
+  notes TEXT,
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_expirationDate (expirationDate),
+  INDEX idx_isActive (isActive),
+  INDEX idx_state (state)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
+-- ATTENDANCE TABLES
+-- ============================================
+
+-- Attendance Logs Table
+CREATE TABLE IF NOT EXISTS attendance_logs (
+  id VARCHAR(36) PRIMARY KEY,
+  employeeId VARCHAR(36) NOT NULL,
+  shiftAssignmentId VARCHAR(36),
+  clockIn DATETIME NOT NULL,
+  clockOut DATETIME,
+  ipAddress VARCHAR(50),
+  deviceInfo VARCHAR(255),
+  isLate BOOLEAN DEFAULT FALSE,
+  isNoShow BOOLEAN DEFAULT FALSE,
+  totalHours DECIMAL(5,2),
+  notes TEXT,
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (employeeId) REFERENCES employees(id) ON DELETE CASCADE,
+  FOREIGN KEY (shiftAssignmentId) REFERENCES shift_assignments(id) ON DELETE SET NULL,
+  INDEX idx_employeeId (employeeId),
+  INDEX idx_clockIn (clockIn),
+  INDEX idx_shiftAssignmentId (shiftAssignmentId)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Clock-in Device Whitelist Table
+CREATE TABLE IF NOT EXISTS clock_in_devices (
+  id VARCHAR(36) PRIMARY KEY,
+  deviceName VARCHAR(255) NOT NULL,
+  ipAddress VARCHAR(50),
+  deviceId VARCHAR(255),
+  location VARCHAR(255),
+  isActive BOOLEAN DEFAULT TRUE,
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_ipAddress (ipAddress),
+  INDEX idx_deviceId (deviceId),
+  INDEX idx_isActive (isActive)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
+-- PTO BALANCE TABLES
+-- ============================================
+
+-- PTO Balances Table
+CREATE TABLE IF NOT EXISTS pto_balances (
+  id VARCHAR(36) PRIMARY KEY,
+  employeeId VARCHAR(36) NOT NULL,
+  year INT NOT NULL,
+  totalPtoBalance DECIMAL(6,2) DEFAULT 0.00,
+  rolloverHours DECIMAL(6,2) DEFAULT 0.00,
+  pendingHours DECIMAL(6,2) DEFAULT 0.00,
+  approvedHours DECIMAL(6,2) DEFAULT 0.00,
+  usedHours DECIMAL(6,2) DEFAULT 0.00,
+  remainingBalance DECIMAL(6,2) DEFAULT 0.00,
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (employeeId) REFERENCES employees(id) ON DELETE CASCADE,
+  UNIQUE KEY unique_employee_year (employeeId, year),
+  INDEX idx_employeeId (employeeId),
+  INDEX idx_year (year)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
+-- HR DOCUMENT TABLES
+-- ============================================
+
+-- HR Documents Table (Templates provided by HR)
+CREATE TABLE IF NOT EXISTS hr_documents (
+  id VARCHAR(36) PRIMARY KEY,
+  title VARCHAR(255) NOT NULL,
+  description TEXT,
+  documentType VARCHAR(100) NOT NULL,
+  documentUrl TEXT NOT NULL,
+  isRequired BOOLEAN DEFAULT FALSE,
+  isActive BOOLEAN DEFAULT TRUE,
+  category VARCHAR(100),
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_documentType (documentType),
+  INDEX idx_category (category),
+  INDEX idx_isActive (isActive)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Employee Document Uploads Table (with approval workflow)
+CREATE TABLE IF NOT EXISTS employee_document_uploads (
+  id VARCHAR(36) PRIMARY KEY,
+  employeeId VARCHAR(36) NOT NULL,
+  hrDocumentId VARCHAR(36),
+  documentName VARCHAR(255) NOT NULL,
+  documentType VARCHAR(100) NOT NULL,
+  fileUrl TEXT NOT NULL,
+  fileSize INT NOT NULL,
+  mimeType VARCHAR(100),
+  approvalStatus VARCHAR(50) DEFAULT 'pending',
+  approvedBy VARCHAR(36),
+  approvedAt DATETIME,
+  rejectionReason TEXT,
+  uploadedByEmployee BOOLEAN DEFAULT TRUE,
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (employeeId) REFERENCES employees(id) ON DELETE CASCADE,
+  FOREIGN KEY (hrDocumentId) REFERENCES hr_documents(id) ON DELETE SET NULL,
+  INDEX idx_employeeId (employeeId),
+  INDEX idx_approvalStatus (approvalStatus),
+  INDEX idx_hrDocumentId (hrDocumentId)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

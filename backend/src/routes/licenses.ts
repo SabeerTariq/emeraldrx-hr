@@ -1,5 +1,7 @@
 import express from "express";
 import { query } from "../config/database.js";
+import { authenticate } from "../middleware/auth.js";
+import { requirePermission } from "../middleware/rbac.js";
 
 const router = express.Router();
 
@@ -7,7 +9,7 @@ const router = express.Router();
  * GET /api/licenses
  * Get all licenses
  */
-router.get("/", async (req, res) => {
+router.get("/", authenticate, requirePermission("licenses:read"), async (req, res) => {
   try {
     const licenses = await query(`
       SELECT 
@@ -31,7 +33,7 @@ router.get("/", async (req, res) => {
  * POST /api/licenses
  * Create new license
  */
-router.post("/", async (req, res) => {
+router.post("/", authenticate, requirePermission("licenses:create"), async (req, res) => {
   try {
     const { employeeId, type, licenseNumber, state, issueDate, expiryDate } = req.body;
 

@@ -30,12 +30,36 @@ router.get("/:key", async (req, res) => {
     ) as any[];
     
     if (results.length === 0) {
-      // Return default values if not found
+      // If theme doesn't exist in database, initialize it
       if (key === SETTINGS_KEYS.SIDEBAR_THEME) {
-        return res.json({
-          success: true,
-          data: DEFAULT_THEME,
-        });
+        // Initialize theme in database with default values
+        const uuid = () => {
+          return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            const r = Math.random() * 16 | 0;
+            const v = c == 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+          });
+        };
+        
+        try {
+          await query(
+            `INSERT INTO system_settings (id, settingKey, settingValue, description, createdAt, updatedAt)
+             VALUES (?, ?, ?, ?, NOW(), NOW())`,
+            [uuid(), SETTINGS_KEYS.SIDEBAR_THEME, JSON.stringify(DEFAULT_THEME), "Sidebar color theme settings"]
+          );
+          // Return the initialized theme
+          return res.json({
+            success: true,
+            data: DEFAULT_THEME,
+          });
+        } catch (insertError: any) {
+          // If insert fails, return default (but this should be rare)
+          console.error("Failed to initialize sidebar theme:", insertError);
+          return res.json({
+            success: true,
+            data: DEFAULT_THEME,
+          });
+        }
       }
       if (key === SETTINGS_KEYS.SIDEBAR_LOGO) {
         return res.json({

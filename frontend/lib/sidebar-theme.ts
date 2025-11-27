@@ -31,14 +31,22 @@ export async function getSidebarTheme(): Promise<SidebarTheme> {
   if (themeCachePromise) return themeCachePromise;
   
   // Make API call
-  themeCachePromise = (async () => {
+  themeCachePromise = (async (): Promise<SidebarTheme> => {
     try {
       if (typeof window === "undefined") return defaultTheme;
       
       const response = await api.get("/settings/sidebar_theme");
-      const theme = response.data.data || defaultTheme;
-      themeCache = { ...defaultTheme, ...theme };
-      return themeCache || defaultTheme;
+      // Use theme from database, merge with defaults only for missing properties
+      const dbTheme = response.data.data as SidebarTheme | null | undefined;
+      if (dbTheme && typeof dbTheme === 'object' && !Array.isArray(dbTheme)) {
+        // Merge database theme with defaults to ensure all properties exist
+        themeCache = { ...defaultTheme, ...dbTheme };
+        return themeCache;
+      }
+      // If database returns null or invalid, return defaultTheme
+      // This will be used until user customizes in System Settings
+      themeCache = defaultTheme;
+      return themeCache;
     } catch (error) {
       console.error("Failed to fetch sidebar theme:", error);
       return defaultTheme;

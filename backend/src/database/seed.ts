@@ -37,6 +37,8 @@ async function seed() {
       
       const departments = [
         { name: "Pharmacy", description: "Pharmacy operations and compounding" },
+        { name: "Compounding", description: "Compounding department" },
+        { name: "Fulfillment", description: "Fulfillment department" },
         { name: "HR", description: "Human Resources" },
         { name: "Compliance", description: "Compliance and regulatory affairs" },
         { name: "Administration", description: "Administrative functions" },
@@ -58,11 +60,87 @@ async function seed() {
       const roleIds: { [key: string]: string } = {};
       
       const roles = [
-        { name: "HR Admin", description: "Full HR system access", permissions: JSON.stringify({ employees: ["create", "read", "update", "delete"], licenses: ["create", "read", "update", "delete"], training: ["create", "read", "update", "delete", "assign"], scheduling: ["create", "read", "update", "delete"], leave: ["read", "approve", "reject"], onboarding: ["create", "read", "update", "delete"], evaluations: ["create", "read", "update", "delete"], incidents: ["create", "read", "update", "delete"] }) },
-        { name: "Compliance Officer", description: "Compliance and training management", permissions: JSON.stringify({ employees: ["read"], licenses: ["create", "read", "update"], training: ["create", "read", "update", "delete", "assign"], scheduling: ["read"], leave: ["read"], onboarding: ["read", "update"], evaluations: ["read"], incidents: ["create", "read", "update"] }) },
-        { name: "Pharmacy Manager", description: "Department management", permissions: JSON.stringify({ employees: ["read", "update"], licenses: ["read"], training: ["read", "assign"], scheduling: ["create", "read", "update", "delete"], leave: ["read", "approve", "reject"], onboarding: ["read", "update"], evaluations: ["create", "read", "update"], incidents: ["create", "read", "update"] }) },
-        { name: "Department Manager", description: "Department-level management", permissions: JSON.stringify({ employees: ["read"], licenses: ["read"], training: ["read", "assign"], scheduling: ["create", "read", "update"], leave: ["read", "approve", "reject"], onboarding: ["read"], evaluations: ["create", "read", "update"], incidents: ["create", "read"] }) },
-        { name: "Employee", description: "Self-service access", permissions: JSON.stringify({ employees: ["read"], licenses: ["read"], training: ["read"], scheduling: ["read"], leave: ["create", "read"], onboarding: ["read"], evaluations: ["read"], incidents: ["create", "read"] }) },
+        // Admin (Super Role) - Full access to everything
+        { 
+          name: "Admin", 
+          description: "Super role with full system access. Manages roles, departments, employees, and all approvals.", 
+          permissions: JSON.stringify({ 
+            employees: ["create", "read", "update", "delete"],
+            roles: ["create", "read", "update", "delete"],
+            departments: ["create", "read", "update", "delete"],
+            licenses: ["create", "read", "update", "delete"],
+            pharmacy_licenses: ["create", "read", "update", "delete"],
+            training: ["create", "read", "update", "delete", "assign"],
+            scheduling: ["create", "read", "update", "delete"],
+            leave: ["read", "approve", "reject"],
+            attendance: ["read", "update"],
+            documents: ["read", "approve", "reject"],
+            policies: ["create", "read", "update", "delete"],
+            settings: ["read", "update"]
+          }) 
+        },
+        // HR Manager - HR operations focused
+        { 
+          name: "HR Manager", 
+          description: "Focused on HR operations: employee onboarding, document management, PTO approval, training assignment.", 
+          permissions: JSON.stringify({ 
+            employees: ["read", "update"],
+            licenses: ["read", "update"],
+            pharmacy_licenses: ["read"],
+            training: ["create", "read", "update", "assign"],
+            scheduling: ["read"],
+            leave: ["read", "approve", "reject"],
+            attendance: ["read"],
+            documents: ["read", "approve", "reject"],
+            policies: ["read", "update"]
+          }) 
+        },
+        // Lead Technician - Departmental leadership
+        { 
+          name: "Lead Technician", 
+          description: "Supervisor/manager for technical departments. Oversees department operations, approves department PTO, manages schedules.", 
+          permissions: JSON.stringify({ 
+            employees: ["read"],
+            licenses: ["read"],
+            pharmacy_licenses: ["read"],
+            training: ["read", "assign"],
+            scheduling: ["create", "read", "update"],
+            leave: ["read", "approve", "reject"],
+            attendance: ["read"],
+            documents: ["read", "approve"],
+            policies: ["read"]
+          }) 
+        },
+        // Compounding Technician - Employee role for Compounding department
+        { 
+          name: "Compounding Technician", 
+          description: "Employee role for Compounding department. Clock in/out, view schedules, submit PTO, complete training.", 
+          permissions: JSON.stringify({ 
+            employees: ["read"],
+            licenses: ["read"],
+            training: ["read"],
+            scheduling: ["read"],
+            leave: ["create", "read"],
+            attendance: ["create", "read"],
+            documents: ["read", "create"],
+            policies: ["read"]
+          }) 
+        },
+        // Fulfillment Technician - Employee role for Fulfillment department
+        { 
+          name: "Fulfillment Technician", 
+          description: "Employee role for Fulfillment department. Clock in/out, view schedules, submit PTO, complete training.", 
+          permissions: JSON.stringify({ 
+            employees: ["read"],
+            licenses: ["read"],
+            training: ["read"],
+            scheduling: ["read"],
+            leave: ["create", "read"],
+            attendance: ["create", "read"],
+            documents: ["read", "create"],
+            policies: ["read"]
+          }) 
+        },
       ];
 
       for (const role of roles) {
@@ -80,17 +158,31 @@ async function seed() {
       console.log("👤 Seeding employees...");
       const employeeIds: string[] = [];
       
+      // Test users for each role - clearly labeled for dashboard testing
       const employees = [
-        { employeeId: "EMP001", firstName: "Sarah", lastName: "Johnson", email: "sarah.johnson@emeraldsrx.com", phone: "555-0101", department: "HR", role: "HR Admin", hireDate: "2020-01-15" },
-        { employeeId: "EMP002", firstName: "Michael", lastName: "Chen", email: "michael.chen@emeraldsrx.com", phone: "555-0102", department: "Compliance", role: "Compliance Officer", hireDate: "2019-03-20" },
-        { employeeId: "EMP003", firstName: "Emily", lastName: "Rodriguez", email: "emily.rodriguez@emeraldsrx.com", phone: "555-0103", department: "Pharmacy", role: "Pharmacy Manager", hireDate: "2018-06-10" },
-        { employeeId: "EMP004", firstName: "David", lastName: "Thompson", email: "david.thompson@emeraldsrx.com", phone: "555-0104", department: "Pharmacy", role: "Department Manager", hireDate: "2021-02-14" },
-        { employeeId: "EMP005", firstName: "Jessica", lastName: "Williams", email: "jessica.williams@emeraldsrx.com", phone: "555-0105", department: "Pharmacy", role: "Employee", hireDate: "2022-05-01" },
-        { employeeId: "EMP006", firstName: "Robert", lastName: "Martinez", email: "robert.martinez@emeraldsrx.com", phone: "555-0106", department: "Pharmacy", role: "Employee", hireDate: "2022-07-15" },
-        { employeeId: "EMP007", firstName: "Amanda", lastName: "Davis", email: "amanda.davis@emeraldsrx.com", phone: "555-0107", department: "Administration", role: "Department Manager", hireDate: "2020-09-01" },
-        { employeeId: "EMP008", firstName: "James", lastName: "Wilson", email: "james.wilson@emeraldsrx.com", phone: "555-0108", department: "Pharmacy", role: "Employee", hireDate: "2023-01-10" },
-        { employeeId: "EMP009", firstName: "Lisa", lastName: "Anderson", email: "lisa.anderson@emeraldsrx.com", phone: "555-0109", department: "Compliance", role: "Employee", hireDate: "2022-11-20" },
-        { employeeId: "EMP010", firstName: "Christopher", lastName: "Brown", email: "christopher.brown@emeraldsrx.com", phone: "555-0110", department: "Pharmacy", role: "Employee", hireDate: "2023-03-05" },
+        // Admin (Super Role) - Full system access
+        { employeeId: "ADMIN001", firstName: "Admin", lastName: "User", email: "admin@emeraldsrx.com", phone: "555-0001", department: "HR", roles: ["Admin"], hireDate: "2020-01-01" },
+        
+        // HR Manager - HR operations focused
+        { employeeId: "HRM001", firstName: "HR", lastName: "Manager", email: "hrmanager@emeraldsrx.com", phone: "555-0002", department: "HR", roles: ["HR Manager"], hireDate: "2019-03-01" },
+        
+        // Lead Technician - Compounding Department
+        { employeeId: "LEAD001", firstName: "Lead", lastName: "Compounding", email: "lead.compounding@emeraldsrx.com", phone: "555-0003", department: "Compounding", roles: ["Lead Technician"], hireDate: "2018-06-01" },
+        
+        // Lead Technician - Fulfillment Department
+        { employeeId: "LEAD002", firstName: "Lead", lastName: "Fulfillment", email: "lead.fulfillment@emeraldsrx.com", phone: "555-0004", department: "Fulfillment", roles: ["Lead Technician"], hireDate: "2018-06-01" },
+        
+        // Compounding Technician - Employee role
+        { employeeId: "COMP001", firstName: "Compounding", lastName: "Tech", email: "compounding.tech@emeraldsrx.com", phone: "555-0005", department: "Compounding", roles: ["Compounding Technician"], hireDate: "2021-02-01" },
+        
+        // Fulfillment Technician - Employee role
+        { employeeId: "FULF001", firstName: "Fulfillment", lastName: "Tech", email: "fulfillment.tech@emeraldsrx.com", phone: "555-0006", department: "Fulfillment", roles: ["Fulfillment Technician"], hireDate: "2021-02-01" },
+        
+        // Additional test users for multi-role testing and department coverage
+        { employeeId: "COMP002", firstName: "Compounding", lastName: "Tech2", email: "compounding.tech2@emeraldsrx.com", phone: "555-0007", department: "Compounding", roles: ["Compounding Technician"], hireDate: "2022-05-01" },
+        { employeeId: "FULF002", firstName: "Fulfillment", lastName: "Tech2", email: "fulfillment.tech2@emeraldsrx.com", phone: "555-0008", department: "Fulfillment", roles: ["Fulfillment Technician"], hireDate: "2022-07-01" },
+        { employeeId: "COMP003", firstName: "Compounding", lastName: "Tech3", email: "compounding.tech3@emeraldsrx.com", phone: "555-0009", department: "Compounding", roles: ["Compounding Technician"], hireDate: "2023-01-01" },
+        { employeeId: "FULF003", firstName: "Fulfillment", lastName: "Tech3", email: "fulfillment.tech3@emeraldsrx.com", phone: "555-0010", department: "Fulfillment", roles: ["Fulfillment Technician"], hireDate: "2023-03-01" },
       ];
 
       for (const emp of employees) {
@@ -103,13 +195,18 @@ async function seed() {
           [id, emp.employeeId, emp.firstName, emp.lastName, emp.email, emp.phone, emp.hireDate, deptIds[emp.department], hashedPassword]
         );
 
-        // Assign role to employee
-        await connection.execute(
-          `INSERT INTO employee_roles (id, employeeId, roleId, createdAt) 
-           VALUES (?, ?, ?, NOW())
-           ON DUPLICATE KEY UPDATE employeeId = employeeId`,
-          [uuid(), id, roleIds[emp.role]]
-        );
+        // Assign multiple roles to employee (supporting multi-role assignment)
+        const rolesToAssign = Array.isArray(emp.roles) ? emp.roles : [emp.roles];
+        for (const roleName of rolesToAssign) {
+          if (roleIds[roleName]) {
+            await connection.execute(
+              `INSERT INTO employee_roles (id, employeeId, roleId, createdAt) 
+               VALUES (?, ?, ?, NOW())
+               ON DUPLICATE KEY UPDATE employeeId = employeeId`,
+              [uuid(), id, roleIds[roleName]]
+            );
+          }
+        }
       }
 
       // 4. Seed Emergency Contacts
@@ -153,21 +250,76 @@ async function seed() {
       const trainingIds: string[] = [];
       
       const trainings = [
-        { title: "HIPAA Compliance Training", description: "Comprehensive HIPAA compliance and patient privacy training", category: "HIPAA", duration: 60, isRequired: true },
-        { title: "Compounding Safety", description: "Safety protocols for pharmaceutical compounding", category: "Safety", duration: 45, isRequired: true },
-        { title: "Waste Management", description: "Proper handling and disposal of pharmaceutical waste", category: "Safety", duration: 30, isRequired: true },
-        { title: "OSHA Workplace Safety", description: "Occupational safety and health administration training", category: "Safety", duration: 40, isRequired: false },
-        { title: "Pharmaceutical Calculations", description: "Advanced pharmaceutical calculations and measurements", category: "Technical", duration: 90, isRequired: false },
+        { 
+          title: "Sexual Harassment Prevention", 
+          description: "Workplace sexual harassment prevention and reporting procedures", 
+          category: "Compliance", 
+          duration: 60, 
+          isRequired: true,
+          supportsVideo: true,
+          supportsPDF: true,
+          supportsQuiz: true
+        },
+        { 
+          title: "HIPAA Compliance Training", 
+          description: "Comprehensive HIPAA compliance and patient privacy training", 
+          category: "HIPAA", 
+          duration: 90, 
+          isRequired: true,
+          supportsVideo: true,
+          supportsPDF: true,
+          supportsQuiz: true
+        },
+        { 
+          title: "Pharmacy Compliance Training", 
+          description: "Pharmacy regulations, compounding standards, and compliance requirements", 
+          category: "Compliance", 
+          duration: 120, 
+          isRequired: true,
+          supportsVideo: true,
+          supportsPDF: true,
+          supportsQuiz: true
+        },
+        { 
+          title: "Compounding Safety", 
+          description: "Safety protocols for pharmaceutical compounding", 
+          category: "Safety", 
+          duration: 45, 
+          isRequired: true,
+          supportsVideo: false,
+          supportsPDF: true,
+          supportsQuiz: false
+        },
+        { 
+          title: "Waste Management", 
+          description: "Proper handling and disposal of pharmaceutical waste", 
+          category: "Safety", 
+          duration: 30, 
+          isRequired: true,
+          supportsVideo: false,
+          supportsPDF: true,
+          supportsQuiz: false
+        },
       ];
 
       for (const training of trainings) {
         const id = uuid();
         trainingIds.push(id);
         await connection.execute(
-          `INSERT INTO trainings (id, title, description, category, duration, isRequired, createdAt, updatedAt) 
-           VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
+          `INSERT INTO trainings (id, title, description, category, duration, isRequired, supportsVideo, supportsPDF, supportsQuiz, createdAt, updatedAt) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
            ON DUPLICATE KEY UPDATE title = title`,
-          [id, training.title, training.description, training.category, training.duration, training.isRequired]
+          [
+            id, 
+            training.title, 
+            training.description, 
+            training.category, 
+            training.duration, 
+            training.isRequired,
+            training.supportsVideo ? 1 : 0,
+            training.supportsPDF ? 1 : 0,
+            training.supportsQuiz ? 1 : 0
+          ]
         );
       }
 
@@ -478,9 +630,17 @@ async function seed() {
     });
 
     console.log("\n📊 Summary:");
-    console.log("  - Departments: 4");
-    console.log("  - Roles: 5");
+    console.log("  - Departments: 6 (Pharmacy, Compounding, Fulfillment, HR, Compliance, Administration)");
+    console.log("  - Roles: 5 (Admin, HR Manager, Lead Technician, Compounding Technician, Fulfillment Technician)");
     console.log("  - Employees: 10");
+    console.log("\n👤 Test Users Created (Password: Password123!):");
+    console.log("  🔴 Admin: admin@emeraldsrx.com");
+    console.log("  🔵 HR Manager: hrmanager@emeraldsrx.com");
+    console.log("  🟢 Lead Technician (Compounding): lead.compounding@emeraldsrx.com");
+    console.log("  🟡 Lead Technician (Fulfillment): lead.fulfillment@emeraldsrx.com");
+    console.log("  🟣 Compounding Technician: compounding.tech@emeraldsrx.com");
+    console.log("  🟠 Fulfillment Technician: fulfillment.tech@emeraldsrx.com");
+    console.log("\n💡 Use these credentials to test each role's dashboard and permissions!");
     console.log("  - Licenses: 10");
     console.log("  - Trainings: 5");
     console.log("  - Training Records: 50");

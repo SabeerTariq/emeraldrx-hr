@@ -15,9 +15,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus, Check, X } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { hasPermission, getUserPermissions } from "@/lib/permissions";
 
 export default function LeavePage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [employeeId] = useState("f50c3257-7329-4cbb-b21c-beddc84a3455"); // In production, get from auth context
+
+  // Fetch user permissions
+  const { data: permissions } = useQuery({
+    queryKey: ["user-permissions"],
+    queryFn: getUserPermissions,
+  });
 
   const { data, isLoading } = useQuery({
     queryKey: ["leave-requests"],
@@ -25,6 +33,15 @@ export default function LeavePage() {
       const response = await api.get("/leave");
       return response.data.data;
     },
+  });
+
+  const { data: ptoBalance } = useQuery({
+    queryKey: ["pto-balance", employeeId],
+    queryFn: async () => {
+      const response = await api.get(`/pto/balance/${employeeId}`);
+      return response.data.data;
+    },
+    enabled: !!employeeId,
   });
 
   const leaveRequests = data || [];
@@ -62,6 +79,42 @@ export default function LeavePage() {
         </Dialog>
       </div>
 
+      {/* PTO Balance Card */}
+      {ptoBalance && (
+        <Card className="mb-6 border-primary">
+          <CardHeader>
+            <CardTitle>PTO Balance</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div>
+                <div className="text-sm text-muted-foreground mb-1">Total Balance</div>
+                <div className="text-2xl font-bold">{parseFloat(ptoBalance.totalPtoBalance || 0).toFixed(1)} hrs</div>
+              </div>
+              <div>
+                <div className="text-sm text-muted-foreground mb-1">Rollover</div>
+                <div className="text-2xl font-bold text-blue-600">{parseFloat(ptoBalance.rolloverHours || 0).toFixed(1)} hrs</div>
+              </div>
+              <div>
+                <div className="text-sm text-muted-foreground mb-1">Pending</div>
+                <div className="text-2xl font-bold text-yellow-600">{parseFloat(ptoBalance.pendingHours || 0).toFixed(1)} hrs</div>
+              </div>
+              <div>
+                <div className="text-sm text-muted-foreground mb-1">Used</div>
+                <div className="text-2xl font-bold text-red-600">{parseFloat(ptoBalance.usedHours || 0).toFixed(1)} hrs</div>
+              </div>
+              <div>
+                <div className="text-sm text-muted-foreground mb-1">Remaining</div>
+                <div className="text-2xl font-bold text-green-600">{parseFloat(ptoBalance.remainingBalance || 0).toFixed(1)} hrs</div>
+              </div>
+            </div>
+            <div className="mt-4 text-sm text-muted-foreground">
+              Year: {ptoBalance.year} | 1 day = 8 hours
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Leave Requests</CardTitle>
@@ -96,8 +149,8 @@ export default function LeavePage() {
                     <TableCell>
                       {request.status === "pending" && (
                         <div className="flex gap-2">
-                          <ApproveLeaveButton requestId={request.id} />
-                          <RejectLeaveButton requestId={request.id} />
+                          <ApproveLeaveButton requestId={request.id} permissions={permissions} />
+                          <RejectLeaveButton requestId={request.id} permissions={permissions} />
                         </div>
                       )}
                     </TableCell>
@@ -207,7 +260,7 @@ function LeaveRequestForm({ onSuccess }: { onSuccess: () => void }) {
   );
 }
 
-function ApproveLeaveButton({ requestId }: { requestId: string }) {
+function ApproveLeaveButton({ requestId, permissions }: { requestId: string; permissions?: any }) {
   const queryClient = useQueryClient();
 
   const approveMutation = useMutation({
@@ -223,6 +276,12 @@ function ApproveLeaveButton({ requestId }: { requestId: string }) {
     },
   });
 
+  const canApprove = permissions && hasPermission(permissions, "leave", "approve");
+
+  if (!canApprove) {
+    return null;
+  }
+
   return (
     <Button
       size="sm"
@@ -236,7 +295,7 @@ function ApproveLeaveButton({ requestId }: { requestId: string }) {
   );
 }
 
-function RejectLeaveButton({ requestId }: { requestId: string }) {
+function RejectLeaveButton({ requestId, permissions }: { requestId: string; permissions?: any }) {
   const queryClient = useQueryClient();
 
   const rejectMutation = useMutation({
@@ -252,6 +311,12 @@ function RejectLeaveButton({ requestId }: { requestId: string }) {
       toast.success("Leave request rejected");
     },
   });
+
+  const canReject = permissions && hasPermission(permissions, "leave", "reject");
+
+  if (!canReject) {
+    return null;
+  }
 
   return (
     <Button

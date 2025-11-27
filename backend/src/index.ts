@@ -36,24 +36,34 @@ const allowedOrigins = process.env.NODE_ENV === "production"
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    // In development, allow common localhost ports
-    if (process.env.NODE_ENV === "development") {
-      // Allow any localhost port in development
-      if (origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:")) {
+    // But when credentials are required, we need to be more careful
+    if (!origin) {
+      // In development, allow requests without origin
+      if (process.env.NODE_ENV !== "production") {
         return callback(null, true);
+      }
+      return callback(new Error("Not allowed by CORS"));
+    }
+    
+    // In development, allow any localhost port
+    if (process.env.NODE_ENV !== "production") {
+      if (origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:")) {
+        // Return the exact origin string (required when credentials: true)
+        return callback(null, origin);
       }
     }
     
     // Check against allowed origins list
     if (allowedOrigins.includes(origin)) {
-      callback(null, true);
+      // Return the exact origin string (required when credentials: true)
+      callback(null, origin);
     } else {
       callback(new Error("Not allowed by CORS"));
     }
   },
   credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
 }));
 app.use(compression()); // Compress responses
 app.use(morgan("dev")); // Logging

@@ -14,12 +14,16 @@ export function getThemeSync(): SidebarTheme {
   // Always return default on server to prevent hydration mismatch
   if (typeof window === "undefined") return defaultTheme;
   
-  // First, check if blocking script loaded theme
+  // First, check if blocking script loaded theme from database
   if ((window as any).__SIDEBAR_THEME_LOADED__ && (window as any).__SIDEBAR_THEME__) {
-    return (window as any).__SIDEBAR_THEME__;
+    // Only use if it's actually from database (not null)
+    const theme = (window as any).__SIDEBAR_THEME__;
+    if (theme && typeof theme === 'object') {
+      return theme;
+    }
   }
   
-  // Fall back to cache or default
+  // Fall back to cache or default (but default should only be used if database truly has no value)
   return getSidebarThemeSync();
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -12,12 +12,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
-import { Plus } from "lucide-react";
+import { Plus, Pencil } from "lucide-react";
 import { format } from "date-fns";
+import { hasPermission, getUserPermissions } from "@/lib/permissions";
+import { toast } from "sonner";
 
 export default function SchedulingPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedShift, setSelectedShift] = useState<any>(null);
+
+  // Fetch user permissions
+  const { data: permissions } = useQuery({
+    queryKey: ["user-permissions"],
+    queryFn: getUserPermissions,
+  });
+
+  const canCreate = permissions && hasPermission(permissions, "scheduling", "create");
+  const canUpdate = permissions && hasPermission(permissions, "scheduling", "update");
 
   // Fetch shifts
   const { data: shiftsData, isLoading } = useQuery({
@@ -46,21 +59,42 @@ export default function SchedulingPage() {
     <div className="container mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Shift Scheduling</h1>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Create Shift
-            </Button>
-          </DialogTrigger>
+        {canCreate && (
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Create Shift
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Create New Shift</DialogTitle>
             </DialogHeader>
             <CreateShiftForm onSuccess={() => setIsDialogOpen(false)} employees={employees} />
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        )}
       </div>
+
+      {/* Edit Shift Dialog */}
+      {canUpdate && selectedShift && (
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Edit Shift</DialogTitle>
+            </DialogHeader>
+            <EditShiftForm 
+              shift={selectedShift} 
+              employees={employees}
+              onSuccess={() => {
+                setIsEditDialogOpen(false);
+                setSelectedShift(null);
+              }} 
+            />
+          </DialogContent>
+        </Dialog>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-1">
@@ -112,7 +146,19 @@ export default function SchedulingPage() {
                             <p className="text-sm mt-2">{shift.notes}</p>
                           )}
                         </div>
-                        <Button variant="outline" size="sm">Edit</Button>
+                        {canUpdate && (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => {
+                              setSelectedShift(shift);
+                              setIsEditDialogOpen(true);
+                            }}
+                          >
+                            <Pencil className="h-4 w-4 mr-1" />
+                            Edit
+                          </Button>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -137,6 +183,15 @@ function CreateShiftForm({ onSuccess, employees }: { onSuccess: () => void; empl
   });
 
   const queryClient = useQueryClient();
+
+  // Fetch departments
+  const { data: departments } = useQuery({
+    queryKey: ["departments"],
+    queryFn: async () => {
+      const response = await api.get("/departments");
+      return response.data.data;
+    },
+  });
 
   const createShiftMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -181,9 +236,11 @@ function CreateShiftForm({ onSuccess, employees }: { onSuccess: () => void; empl
               <SelectValue placeholder="Select department" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="pharmacy">Pharmacy</SelectItem>
-              <SelectItem value="hr">HR</SelectItem>
-              <SelectItem value="compliance">Compliance</SelectItem>
+              {departments?.map((dept: any) => (
+                <SelectItem key={dept.id} value={dept.id}>
+                  {dept.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -274,6 +331,194 @@ function CreateShiftForm({ onSuccess, employees }: { onSuccess: () => void; empl
         </Button>
         <Button type="submit" disabled={createShiftMutation.isPending}>
           {createShiftMutation.isPending ? "Creating..." : "Create Shift"}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+function EditShiftForm({ shift, onSuccess, employees }: { shift: any; onSuccess: () => void; employees: any[] }) {
+  const [formData, setFormData] = useState({
+    date: shift.date ? format(new Date(shift.date), "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"),
+    startTime: shift.startTime ? format(new Date(shift.startTime), "HH:mm") : "09:00",
+    endTime: shift.endTime ? format(new Date(shift.endTime), "HH:mm") : "17:00",
+    departmentId: shift.departmentId || "",
+    notes: shift.notes || "",
+    employeeIds: [] as string[],
+  });
+
+  const queryClient = useQueryClient();
+
+  // Fetch current shift assignments
+  const { data: currentAssignments } = useQuery({
+    queryKey: ["shift-assignments", shift.id],
+    queryFn: async () => {
+      const response = await api.get(`/scheduling/shifts/${shift.id}/assignments`);
+      return response.data.data;
+    },
+    enabled: !!shift.id,
+  });
+
+  useEffect(() => {
+    if (currentAssignments) {
+      setFormData(prev => ({
+        ...prev,
+        employeeIds: currentAssignments.map((a: any) => a.employeeId)
+      }));
+    }
+  }, [currentAssignments]);
+
+  const updateShiftMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await api.put(`/scheduling/shifts/${shift.id}`, {
+        ...data,
+        startTime: `${data.date} ${data.startTime}:00`,
+        endTime: `${data.date} ${data.endTime}:00`,
+      });
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["shifts"] });
+      toast.success("Shift updated successfully");
+      onSuccess();
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Failed to update shift");
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateShiftMutation.mutate(formData);
+  };
+
+  // Fetch departments
+  const { data: departments } = useQuery({
+    queryKey: ["departments"],
+    queryFn: async () => {
+      const response = await api.get("/departments");
+      return response.data.data;
+    },
+  });
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="edit-date">Date</Label>
+          <Input
+            id="edit-date"
+            type="date"
+            value={formData.date}
+            onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="edit-department">Department</Label>
+          <Select
+            value={formData.departmentId}
+            onValueChange={(value) => setFormData({ ...formData, departmentId: value })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select department" />
+            </SelectTrigger>
+            <SelectContent>
+              {departments?.map((dept: any) => (
+                <SelectItem key={dept.id} value={dept.id}>
+                  {dept.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="edit-startTime">Start Time</Label>
+          <Input
+            id="edit-startTime"
+            type="time"
+            value={formData.startTime}
+            onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="edit-endTime">End Time</Label>
+          <Input
+            id="edit-endTime"
+            type="time"
+            value={formData.endTime}
+            onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+            required
+          />
+        </div>
+      </div>
+
+      <div>
+        <Label htmlFor="edit-employees">Assign Employees</Label>
+        <Select
+          onValueChange={(value) => {
+            if (!formData.employeeIds.includes(value)) {
+              setFormData({ ...formData, employeeIds: [...formData.employeeIds, value] });
+            }
+          }}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select employee to assign" />
+          </SelectTrigger>
+          <SelectContent>
+            {employees.map((emp: any) => (
+              <SelectItem key={emp.id} value={emp.id}>
+                {emp.firstName} {emp.lastName} ({emp.employeeId})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {formData.employeeIds.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {formData.employeeIds.map((empId) => {
+              const emp = employees.find((e: any) => e.id === empId);
+              return emp ? (
+                <Badge key={empId} variant="secondary">
+                  {emp.firstName} {emp.lastName}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormData({
+                        ...formData,
+                        employeeIds: formData.employeeIds.filter((id) => id !== empId),
+                      })
+                    }
+                    className="ml-2"
+                  >
+                    ×
+                  </button>
+                </Badge>
+              ) : null;
+            })}
+          </div>
+        )}
+      </div>
+
+      <div>
+        <Label htmlFor="edit-notes">Notes</Label>
+        <Textarea
+          id="edit-notes"
+          value={formData.notes}
+          onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+          rows={3}
+        />
+      </div>
+
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="outline" onClick={onSuccess}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={updateShiftMutation.isPending}>
+          {updateShiftMutation.isPending ? "Updating..." : "Update Shift"}
         </Button>
       </div>
     </form>

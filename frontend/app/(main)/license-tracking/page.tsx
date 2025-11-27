@@ -9,9 +9,18 @@ import { Badge } from "@/components/ui/badge";
 import { LicenseModal } from "@/components/modals/LicenseModal";
 import { Plus } from "lucide-react";
 import { format } from "date-fns";
+import { hasPermission, getUserPermissions } from "@/lib/permissions";
 
 export default function LicensesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Fetch user permissions
+  const { data: permissions } = useQuery({
+    queryKey: ["user-permissions"],
+    queryFn: getUserPermissions,
+  });
+
+  const canCreate = permissions && hasPermission(permissions, "licenses", "create");
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["licenses"],
@@ -45,10 +54,12 @@ export default function LicensesPage() {
     <div className="container mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Licenses & Certifications</h1>
-        <Button onClick={() => setIsModalOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add License
-        </Button>
+        {canCreate && (
+          <Button onClick={() => setIsModalOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add License
+          </Button>
+        )}
       </div>
       
       <div className="bg-card border rounded-lg overflow-hidden">

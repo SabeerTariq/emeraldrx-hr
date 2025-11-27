@@ -88,10 +88,10 @@ export function SidebarColorPicker() {
         return color.toLowerCase();
       }
     }
-    // If it's HSL or other format, try to convert or return default
+    // If it's HSL or other format, try to convert or return as-is
     if (color.startsWith("hsl")) {
-      // Convert HSL to hex (fallback)
-      return "#22c55e";
+      // Return HSL as-is, let the color picker handle it
+      return color;
     }
     // Default fallback
     return color.startsWith("#") ? color : `#${color}`;

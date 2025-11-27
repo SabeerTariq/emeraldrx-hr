@@ -17,7 +17,6 @@ import { toast } from "sonner";
 interface NewHireModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  autoAssignOnboardingTasks?: boolean;
 }
 
 interface EmergencyContact {
@@ -28,7 +27,7 @@ interface EmergencyContact {
   isPrimary: boolean;
 }
 
-export function NewHireModal({ open, onOpenChange, autoAssignOnboardingTasks = false }: NewHireModalProps) {
+export function NewHireModal({ open, onOpenChange }: NewHireModalProps) {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("personal");
 
@@ -106,30 +105,7 @@ export function NewHireModal({ open, onOpenChange, autoAssignOnboardingTasks = f
         }
       }
 
-      // Auto-assign onboarding tasks if requested
-      if (autoAssignOnboardingTasks) {
-        try {
-          // Get all onboarding tasks
-          const tasksResponse = await api.get("/onboarding/tasks");
-          const allTasks = tasksResponse.data.data || [];
-          // Assign all tasks (or filter by isRequired if that field exists)
-          const taskIds = allTasks.map((task: any) => task.id);
-
-          if (taskIds.length > 0) {
-            await api.post(`/onboarding/employees/${employeeId}/tasks`, {
-              taskIds: taskIds
-            });
-            toast.success("Onboarding tasks assigned automatically");
-          }
-        } catch (error) {
-          console.error("Failed to assign onboarding tasks:", error);
-          // Don't fail the whole process if onboarding tasks fail
-        }
-      }
-
       queryClient.invalidateQueries({ queryKey: ["employees"] });
-      queryClient.invalidateQueries({ queryKey: ["employee-onboarding-tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["onboarding-tasks"] });
       toast.success("New employee hired successfully!");
       handleReset();
       onOpenChange(false);

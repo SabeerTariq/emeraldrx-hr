@@ -30,6 +30,7 @@ export function EmployeeModal({ open, onOpenChange, employeeId }: EmployeeModalP
     zipCode: "",
     hireDate: new Date().toISOString().split("T")[0],
     departmentId: "",
+    designation: "",
     password: "",
   });
 
@@ -70,6 +71,7 @@ export function EmployeeModal({ open, onOpenChange, employeeId }: EmployeeModalP
         zipCode: employeeData.zipCode || "",
         hireDate: employeeData.hireDate ? new Date(employeeData.hireDate).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
         departmentId: employeeData.departmentId || "",
+        designation: employeeData.designation || "",
         password: "",
       });
     }
@@ -144,6 +146,15 @@ export function EmployeeModal({ open, onOpenChange, employeeId }: EmployeeModalP
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div>
+              <Label htmlFor="designation">Designation</Label>
+              <Input
+                id="designation"
+                value={formData.designation}
+                onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
+                placeholder="e.g., Senior Technician, Manager, etc."
+              />
             </div>
           </div>
 

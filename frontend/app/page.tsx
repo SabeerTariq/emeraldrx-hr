@@ -1,6 +1,24 @@
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { isAuthenticated, getDashboardRoute, getCurrentUser } from "@/lib/auth";
 import Link from "next/link";
 
 export default function HomePage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    // If user is authenticated, redirect to their dashboard
+    if (isAuthenticated()) {
+      const user = getCurrentUser();
+      if (user) {
+        const dashboardRoute = getDashboardRoute(user);
+        router.push(dashboardRoute);
+      }
+    }
+  }, [router]);
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-24">
       <div className="text-center max-w-2xl">
@@ -12,16 +30,10 @@ export default function HomePage() {
         </p>
         <div className="flex gap-4 justify-center">
           <Link
-            href="/dashboard"
+            href="/login"
             className="bg-primary text-primary-foreground px-6 py-3 rounded-md hover:bg-primary/90 transition-colors"
           >
-            Go to Dashboard
-          </Link>
-          <Link
-            href="/employee-management"
-            className="bg-secondary text-secondary-foreground px-6 py-3 rounded-md hover:bg-secondary/90 transition-colors"
-          >
-            View Employees
+            Sign In
           </Link>
         </div>
       </div>

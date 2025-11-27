@@ -1,5 +1,7 @@
 import express from "express";
 import { query } from "../config/database.js";
+import { authenticate } from "../middleware/auth.js";
+import { requirePermission } from "../middleware/rbac.js";
 
 const router = express.Router();
 
@@ -7,7 +9,7 @@ const router = express.Router();
  * GET /api/policies
  * Get all policies
  */
-router.get("/", async (req, res) => {
+router.get("/", authenticate, requirePermission("policies:read"), async (req, res) => {
   try {
     const policies = await query(`
       SELECT * FROM policies WHERE isActive = 1 ORDER BY createdAt DESC
@@ -22,7 +24,7 @@ router.get("/", async (req, res) => {
  * GET /api/policies/:id/acknowledgments
  * Get policy acknowledgments
  */
-router.get("/:id/acknowledgments", async (req, res) => {
+router.get("/:id/acknowledgments", authenticate, requirePermission("policies:read"), async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -48,7 +50,7 @@ router.get("/:id/acknowledgments", async (req, res) => {
  * POST /api/policies/:id/acknowledge
  * Acknowledge policy
  */
-router.post("/:id/acknowledge", async (req, res) => {
+router.post("/:id/acknowledge", authenticate, requirePermission("policies:read"), async (req, res) => {
   try {
     const { id } = req.params;
     const { employeeId, ipAddress } = req.body;
