@@ -28,11 +28,11 @@ const getAllowedOrigins = () => {
   const origins: string[] = [];
   
   // Production origins (always allowed)
-  const productionOrigins = [
-    "*",
-    // Add more production domains here as needed
-  ];
-  origins.push(...productionOrigins);
+  // const productionOrigins = [
+  //   "*",
+  //   // Add more production domains here as needed
+  // ];
+  origins.push("https://emeraldsrxhr.sitestaginglink.com");
   
   // Add FRONTEND_URL if set (remove trailing slash if present)
   if (process.env.FRONTEND_URL) {
