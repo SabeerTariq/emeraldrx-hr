@@ -27,17 +27,16 @@ app.use(helmet({
 const getAllowedOrigins = () => {
   const origins: string[] = [];
   
-  // Production origins (always allowed)
-  // const productionOrigins = [
-  //   "*",
-  //   // Add more production domains here as needed
-  // ];
-  origins.push("https://emeraldsrxhr.sitestaginglink.com");
+  // Production origins (always allowed) - normalize by removing trailing slash
+  const productionUrl = "https://emeraldsrxhr.sitestaginglink.com";
+  origins.push(productionUrl.replace(/\/$/, ""));
   
   // Add FRONTEND_URL if set (remove trailing slash if present)
   if (process.env.FRONTEND_URL) {
     const frontendUrl = process.env.FRONTEND_URL.replace(/\/$/, ""); // Remove trailing slash
-    origins.push(frontendUrl);
+    if (frontendUrl && !origins.includes(frontendUrl)) {
+      origins.push(frontendUrl);
+    }
   }
   
   // Add additional production origins if set (comma-separated)
@@ -46,23 +45,33 @@ const getAllowedOrigins = () => {
       .split(",")
       .map(o => o.trim().replace(/\/$/, "")) // Remove trailing slashes
       .filter(Boolean);
-    origins.push(...additionalOrigins);
+    additionalOrigins.forEach(origin => {
+      if (!origins.includes(origin)) {
+        origins.push(origin);
+      }
+    });
   }
   
   // In development, add localhost origins
   if (process.env.NODE_ENV !== "production") {
-    origins.push(
+    const localhostOrigins = [
       "http://localhost:3000",
       "http://localhost:1206",
       "http://localhost:3001",
       "http://127.0.0.1:3000",
       "http://127.0.0.1:1206",
       "http://127.0.0.1:3001"
-    );
+    ];
+    localhostOrigins.forEach(origin => {
+      if (!origins.includes(origin)) {
+        origins.push(origin);
+      }
+    });
   }
   
   // Remove duplicates and normalize (remove trailing slashes)
-  return [...new Set(origins.filter(Boolean).map(o => o.replace(/\/$/, "")))];
+  const normalized = origins.filter(Boolean).map(o => o.replace(/\/$/, ""));
+  return [...new Set(normalized)];
 };
 
 const allowedOrigins = getAllowedOrigins();
@@ -95,11 +104,14 @@ app.use(cors({
     // Check against allowed origins list (normalized)
     if (allowedOrigins.includes(normalizedOrigin)) {
       // Return the exact origin string (required when credentials: true)
+      // This is critical - must return the original origin, not normalized
       callback(null, origin);
     } else {
       // Log rejected origin for debugging
       console.warn(`🚫 CORS rejected origin: ${origin}`);
+      console.warn(`   Normalized: ${normalizedOrigin}`);
       console.warn(`   Allowed origins: ${allowedOrigins.join(", ")}`);
+      console.warn(`   Match check: ${allowedOrigins.includes(normalizedOrigin)}`);
       callback(new Error(`Not allowed by CORS - origin: ${origin}`));
     }
   },
@@ -119,19 +131,36 @@ console.log(`📁 Serving uploads from: ${uploadsPath}`);
 
 app.use("/uploads", (req, res, next) => {
   const origin = req.headers.origin;
+  
+  // Normalize origin (remove trailing slash for comparison)
+  const normalizedOrigin = origin ? origin.replace(/\/$/, "") : null;
+  
   // In development, allow any localhost origin
   if (process.env.NODE_ENV !== "production" && origin && 
       (origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:"))) {
     res.header("Access-Control-Allow-Origin", origin);
-  } else if (origin && allowedOrigins.includes(origin)) {
+    res.header("Access-Control-Allow-Credentials", "true");
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  } else if (normalizedOrigin && allowedOrigins.includes(normalizedOrigin)) {
+    // Return exact origin (required when credentials: true)
     res.header("Access-Control-Allow-Origin", origin);
+    res.header("Access-Control-Allow-Credentials", "true");
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
   } else if (allowedOrigins.length > 0) {
     // Fallback to first allowed origin
     res.header("Access-Control-Allow-Origin", allowedOrigins[0]);
+    res.header("Access-Control-Allow-Credentials", "true");
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
   } else {
-    res.header("Access-Control-Allow-Origin", process.env.FRONTEND_URL || "http://localhost:1206");
+    const fallbackOrigin = process.env.FRONTEND_URL?.replace(/\/$/, "") || "http://localhost:1206";
+    res.header("Access-Control-Allow-Origin", fallbackOrigin);
+    res.header("Access-Control-Allow-Credentials", "true");
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
   }
-  res.header("Access-Control-Allow-Credentials", "true");
   next();
 }, express.static(uploadsPath));
 
