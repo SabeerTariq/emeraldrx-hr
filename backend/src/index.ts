@@ -29,7 +29,7 @@ const getAllowedOrigins = () => {
   
   // Production origins (always allowed)
   const productionOrigins = [
-    "https://emeraldsrxhr.sitestaginglink.com",
+    "*",
     // Add more production domains here as needed
   ];
   origins.push(...productionOrigins);
