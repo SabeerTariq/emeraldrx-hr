@@ -27,14 +27,25 @@ app.use(helmet({
 const getAllowedOrigins = () => {
   const origins: string[] = [];
   
-  // Add FRONTEND_URL if set
+  // Production origins (always allowed)
+  const productionOrigins = [
+    "https://emeraldsrxhr.sitestaginglink.com",
+    // Add more production domains here as needed
+  ];
+  origins.push(...productionOrigins);
+  
+  // Add FRONTEND_URL if set (remove trailing slash if present)
   if (process.env.FRONTEND_URL) {
-    origins.push(process.env.FRONTEND_URL);
+    const frontendUrl = process.env.FRONTEND_URL.replace(/\/$/, ""); // Remove trailing slash
+    origins.push(frontendUrl);
   }
   
   // Add additional production origins if set (comma-separated)
   if (process.env.ALLOWED_ORIGINS) {
-    const additionalOrigins = process.env.ALLOWED_ORIGINS.split(",").map(o => o.trim()).filter(Boolean);
+    const additionalOrigins = process.env.ALLOWED_ORIGINS
+      .split(",")
+      .map(o => o.trim().replace(/\/$/, "")) // Remove trailing slashes
+      .filter(Boolean);
     origins.push(...additionalOrigins);
   }
   
@@ -50,8 +61,8 @@ const getAllowedOrigins = () => {
     );
   }
   
-  // Remove duplicates
-  return [...new Set(origins.filter(Boolean))];
+  // Remove duplicates and normalize (remove trailing slashes)
+  return [...new Set(origins.filter(Boolean).map(o => o.replace(/\/$/, "")))];
 };
 
 const allowedOrigins = getAllowedOrigins();
@@ -70,6 +81,9 @@ app.use(cors({
       return callback(new Error("Not allowed by CORS - no origin"));
     }
     
+    // Normalize origin (remove trailing slash for comparison)
+    const normalizedOrigin = origin.replace(/\/$/, "");
+    
     // In development, allow any localhost port
     if (process.env.NODE_ENV !== "production") {
       if (origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:")) {
@@ -78,8 +92,8 @@ app.use(cors({
       }
     }
     
-    // Check against allowed origins list
-    if (allowedOrigins.includes(origin)) {
+    // Check against allowed origins list (normalized)
+    if (allowedOrigins.includes(normalizedOrigin)) {
       // Return the exact origin string (required when credentials: true)
       callback(null, origin);
     } else {
