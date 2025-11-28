@@ -86,7 +86,14 @@ app.use(cors({
       if (process.env.NODE_ENV !== "production") {
         return callback(null, true);
       }
-      // In production, reject requests without origin for security
+      // In production, allow requests without origin if we have allowed origins
+      // This handles Next.js rewrites, SSR, and same-origin requests
+      // Use the first allowed origin as fallback (typically the production URL)
+      if (allowedOrigins.length > 0) {
+        console.warn(`⚠️  Request without origin (likely proxied/SSR), using fallback: ${allowedOrigins[0]}`);
+        return callback(null, allowedOrigins[0]);
+      }
+      // Last resort: reject
       return callback(new Error("Not allowed by CORS - no origin"));
     }
     
