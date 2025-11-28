@@ -37,9 +37,12 @@ export default function RootLayout({
                   
                   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
                     apiUrl = 'http://localhost:5000';
-                  } else {
-                    // In production, use same origin (API should be proxied via Next.js rewrites)
+                  } else if (window.location.hostname === 'emeraldsrxhr.sitestaginglink.com') {
+                    // Production/staging URL - use same origin (API should be proxied via Next.js rewrites)
                     // The rewrites in next.config.js will proxy /api/* to the backend
+                    apiUrl = window.location.origin;
+                  } else {
+                    // Fallback: use same origin
                     apiUrl = window.location.origin;
                   }
                   
