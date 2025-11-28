@@ -23,15 +23,39 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
 })); // Security headers
 
-// CORS configuration - allow multiple origins in development
-const allowedOrigins = process.env.NODE_ENV === "production"
-  ? [process.env.FRONTEND_URL || "http://localhost:3000"]
-  : [
+// CORS configuration - allow multiple origins
+const getAllowedOrigins = () => {
+  const origins: string[] = [];
+  
+  // Add FRONTEND_URL if set
+  if (process.env.FRONTEND_URL) {
+    origins.push(process.env.FRONTEND_URL);
+  }
+  
+  // Add additional production origins if set (comma-separated)
+  if (process.env.ALLOWED_ORIGINS) {
+    const additionalOrigins = process.env.ALLOWED_ORIGINS.split(",").map(o => o.trim()).filter(Boolean);
+    origins.push(...additionalOrigins);
+  }
+  
+  // In development, add localhost origins
+  if (process.env.NODE_ENV !== "production") {
+    origins.push(
       "http://localhost:3000",
       "http://localhost:1206",
       "http://localhost:3001",
-      process.env.FRONTEND_URL,
-    ].filter(Boolean);
+      "http://127.0.0.1:3000",
+      "http://127.0.0.1:1206",
+      "http://127.0.0.1:3001"
+    );
+  }
+  
+  // Remove duplicates
+  return [...new Set(origins.filter(Boolean))];
+};
+
+const allowedOrigins = getAllowedOrigins();
+console.log(`🌐 Allowed CORS origins: ${allowedOrigins.join(", ")}`);
 
 app.use(cors({
   origin: (origin, callback) => {
@@ -42,7 +66,8 @@ app.use(cors({
       if (process.env.NODE_ENV !== "production") {
         return callback(null, true);
       }
-      return callback(new Error("Not allowed by CORS"));
+      // In production, reject requests without origin for security
+      return callback(new Error("Not allowed by CORS - no origin"));
     }
     
     // In development, allow any localhost port
@@ -58,7 +83,10 @@ app.use(cors({
       // Return the exact origin string (required when credentials: true)
       callback(null, origin);
     } else {
-      callback(new Error("Not allowed by CORS"));
+      // Log rejected origin for debugging
+      console.warn(`🚫 CORS rejected origin: ${origin}`);
+      console.warn(`   Allowed origins: ${allowedOrigins.join(", ")}`);
+      callback(new Error(`Not allowed by CORS - origin: ${origin}`));
     }
   },
   credentials: true,
@@ -78,11 +106,14 @@ console.log(`📁 Serving uploads from: ${uploadsPath}`);
 app.use("/uploads", (req, res, next) => {
   const origin = req.headers.origin;
   // In development, allow any localhost origin
-  if (process.env.NODE_ENV === "development" && origin && 
+  if (process.env.NODE_ENV !== "production" && origin && 
       (origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:"))) {
     res.header("Access-Control-Allow-Origin", origin);
   } else if (origin && allowedOrigins.includes(origin)) {
     res.header("Access-Control-Allow-Origin", origin);
+  } else if (allowedOrigins.length > 0) {
+    // Fallback to first allowed origin
+    res.header("Access-Control-Allow-Origin", allowedOrigins[0]);
   } else {
     res.header("Access-Control-Allow-Origin", process.env.FRONTEND_URL || "http://localhost:1206");
   }
