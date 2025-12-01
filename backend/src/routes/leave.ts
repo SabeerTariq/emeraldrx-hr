@@ -2,16 +2,24 @@ import express from "express";
 import { query, transaction } from "../config/database.js";
 import { authenticate } from "../middleware/auth.js";
 import { requirePermission } from "../middleware/rbac.js";
+import { getAccessibleEmployeeIds, canViewEmployee } from "../middleware/departmentAccess.js";
 
 const router = express.Router();
 
 /**
  * GET /api/leave
- * Get all leave requests
+ * Get all leave requests (filtered by department access)
+ * - Employees: Can only see their own leave requests
+ * - Department Leads: Can only see leave requests from employees in their department
+ * - Admins/HR/Managers: Can see all leave requests
  */
 router.get("/", authenticate, requirePermission("leave:read"), async (req, res) => {
   try {
+    const user = (req as any).user;
     const { status, employeeId } = req.query;
+    
+    // Get accessible employee IDs based on user's role and department
+    const accessibleEmployeeIds = await getAccessibleEmployeeIds(user.id);
     
     let sql = `
       SELECT 
@@ -19,24 +27,52 @@ router.get("/", authenticate, requirePermission("leave:read"), async (req, res) 
         e.firstName,
         e.lastName,
         e.employeeId,
+        e.departmentId,
+        d.name as departmentName,
         approver.firstName as approverFirstName,
         approver.lastName as approverLastName
       FROM leave_requests lr
       JOIN employees e ON lr.employeeId = e.id
+      LEFT JOIN departments d ON e.departmentId = d.id
       LEFT JOIN employees approver ON lr.approvedBy = approver.id
     `;
     
     const params: any[] = [];
     const conditions: string[] = [];
     
+    // Apply department-based filtering
+    if (accessibleEmployeeIds !== null) {
+      // null means user can view all (Admin/HR/Manager)
+      if (accessibleEmployeeIds.length === 0) {
+        // No access - return empty array
+        return res.json({ success: true, data: [] });
+      }
+      // Filter by accessible employee IDs
+      const placeholders = accessibleEmployeeIds.map(() => '?').join(',');
+      conditions.push(`lr.employeeId IN (${placeholders})`);
+      params.push(...accessibleEmployeeIds);
+    }
+    
     if (status) {
       conditions.push("lr.status = ?");
       params.push(status);
     }
     
+    // If employeeId is provided, ensure user has access to that employee's requests
     if (employeeId) {
+      // Ensure employeeId is a string (handle query parameter type)
+      const employeeIdStr = Array.isArray(employeeId) ? employeeId[0] : employeeId;
+      const employeeIdString = typeof employeeIdStr === 'string' ? employeeIdStr : String(employeeIdStr);
+      
+      if (accessibleEmployeeIds !== null && !accessibleEmployeeIds.includes(employeeIdString)) {
+        // User doesn't have access to this employee's leave requests
+        return res.status(403).json({ 
+          success: false, 
+          error: "Access denied. You can only view leave requests for employees in your department." 
+        });
+      }
       conditions.push("lr.employeeId = ?");
-      params.push(employeeId);
+      params.push(employeeIdString);
     }
     
     if (conditions.length > 0) {
@@ -157,9 +193,12 @@ router.post("/", authenticate, requirePermission("leave:create"), async (req, re
 /**
  * PUT /api/leave/:id/approve
  * Approve leave request
+ * - Department Leads can only approve leave requests from employees in their department
+ * - Admins/HR/Managers can approve any leave request
  */
 router.put("/:id/approve", authenticate, requirePermission("leave:approve"), async (req, res) => {
   try {
+    const user = (req as any).user;
     const { id } = req.params;
     const { approvedBy, managerComments } = req.body;
     
@@ -174,6 +213,15 @@ router.put("/:id/approve", authenticate, requirePermission("leave:approve"), asy
     }
     
     const request = leaveRequest[0];
+    
+    // Check if user has access to approve this leave request (department-based access)
+    const canAccess = await canViewEmployee(user.id, request.employeeId);
+    if (!canAccess) {
+      return res.status(403).json({ 
+        success: false, 
+        error: "Access denied. You can only approve leave requests for employees in your department." 
+      });
+    }
     const hoursPerDay = 8;
     const approvedHours = (request.daysRequested || 0) * hoursPerDay;
     
@@ -247,9 +295,12 @@ router.put("/:id/approve", authenticate, requirePermission("leave:approve"), asy
 /**
  * PUT /api/leave/:id/reject
  * Reject leave request
+ * - Department Leads can only reject leave requests from employees in their department
+ * - Admins/HR/Managers can reject any leave request
  */
 router.put("/:id/reject", authenticate, requirePermission("leave:reject"), async (req, res) => {
   try {
+    const user = (req as any).user;
     const { id } = req.params;
     const { approvedBy, rejectionReason, managerComments } = req.body;
     
@@ -264,6 +315,15 @@ router.put("/:id/reject", authenticate, requirePermission("leave:reject"), async
     }
     
     const request = leaveRequest[0];
+    
+    // Check if user has access to reject this leave request (department-based access)
+    const canAccess = await canViewEmployee(user.id, request.employeeId);
+    if (!canAccess) {
+      return res.status(403).json({ 
+        success: false, 
+        error: "Access denied. You can only reject leave requests for employees in your department." 
+      });
+    }
     const hoursPerDay = 8;
     const rejectedHours = (request.daysRequested || 0) * hoursPerDay;
     

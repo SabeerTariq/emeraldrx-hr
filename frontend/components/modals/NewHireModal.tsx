@@ -45,6 +45,7 @@ export function NewHireModal({ open, onOpenChange }: NewHireModalProps) {
     hireDate: new Date().toISOString().split("T")[0],
     departmentId: "",
     password: "",
+    employeeType: "member" as "member" | "lead", // member or lead
     roleIds: [] as string[],
   });
 
@@ -61,7 +62,7 @@ export function NewHireModal({ open, onOpenChange }: NewHireModalProps) {
     },
   });
 
-  // Fetch roles
+  // Fetch roles to get Employee and Department Lead role IDs
   const { data: rolesData } = useQuery({
     queryKey: ["roles"],
     queryFn: async () => {
@@ -74,6 +75,10 @@ export function NewHireModal({ open, onOpenChange }: NewHireModalProps) {
       }
     },
   });
+
+  // Get role IDs for Employee and Department Lead
+  const employeeRoleId = rolesData?.find((r: any) => r.name === "Employee")?.id;
+  const departmentLeadRoleId = rolesData?.find((r: any) => r.name === "Department Lead")?.id;
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -94,15 +99,27 @@ export function NewHireModal({ open, onOpenChange }: NewHireModalProps) {
         }
       }
 
-      // Assign roles
-      if (formData.roleIds.length > 0) {
+      // Automatically assign role based on employee type (Member or Lead)
+      let roleIdToAssign: string | null = null;
+      if (formData.employeeType === "member" && employeeRoleId) {
+        roleIdToAssign = employeeRoleId;
+      } else if (formData.employeeType === "lead" && departmentLeadRoleId) {
+        roleIdToAssign = departmentLeadRoleId;
+      }
+
+      // Assign the role
+      if (roleIdToAssign) {
         try {
           await api.post(`/employees/${employeeId}/roles`, {
-            roleIds: formData.roleIds
+            roleIds: [roleIdToAssign]
           });
         } catch (error) {
-          console.error("Failed to assign roles:", error);
+          console.error("Failed to assign role:", error);
+          toast.error("Employee created but failed to assign role. Please assign manually.");
         }
+      } else {
+        console.warn("Could not find role ID for employee type:", formData.employeeType);
+        toast.warning("Employee created but role could not be assigned. Please assign manually.");
       }
 
       queryClient.invalidateQueries({ queryKey: ["employees"] });
@@ -130,6 +147,7 @@ export function NewHireModal({ open, onOpenChange }: NewHireModalProps) {
       hireDate: new Date().toISOString().split("T")[0],
       departmentId: "",
       password: "",
+      employeeType: "member",
       roleIds: [],
     });
     setEmergencyContacts([{ name: "", relationship: "", phone: "", email: "", isPrimary: true }]);
@@ -170,14 +188,7 @@ export function NewHireModal({ open, onOpenChange }: NewHireModalProps) {
     setEmergencyContacts(updated);
   };
 
-  const toggleRole = (roleId: string) => {
-    setFormData({
-      ...formData,
-      roleIds: formData.roleIds.includes(roleId)
-        ? formData.roleIds.filter(id => id !== roleId)
-        : [...formData.roleIds, roleId]
-    });
-  };
+  // Role toggle removed - roles are now auto-assigned based on employee type
 
   const states = [
     "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
@@ -363,6 +374,28 @@ export function NewHireModal({ open, onOpenChange }: NewHireModalProps) {
                   </div>
 
                   <div>
+                    <Label htmlFor="employeeType">Employee Type *</Label>
+                    <Select
+                      value={formData.employeeType}
+                      onValueChange={(value: "member" | "lead") => setFormData({ ...formData, employeeType: value })}
+                      required
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select employee type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="member">Member</SelectItem>
+                        <SelectItem value="lead">Lead</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {formData.employeeType === "member" 
+                        ? "Member: Will be assigned 'Employee' role. Can view own information only."
+                        : "Lead: Will be assigned 'Department Lead' role. Can view own information and department members' information (read-only)."}
+                    </p>
+                  </div>
+
+                  <div>
                     <Label htmlFor="hireDate">Hire Date *</Label>
                     <Input
                       id="hireDate"
@@ -497,39 +530,31 @@ export function NewHireModal({ open, onOpenChange }: NewHireModalProps) {
               </Card>
             </TabsContent>
 
-            {/* Roles & Access Tab */}
+            {/* Roles & Access Tab - Hidden, roles are auto-assigned based on employee type */}
             <TabsContent value="roles" className="space-y-4 mt-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Roles & Access</CardTitle>
-                  <CardDescription>Assign roles to grant permissions</CardDescription>
+                  <CardTitle>Role Assignment</CardTitle>
+                  <CardDescription>Role will be automatically assigned based on employee type</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {rolesData && rolesData.length > 0 ? (
-                    <div className="space-y-2">
-                      {rolesData.map((role: any) => (
-                        <div
-                          key={role.id}
-                          className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-accent transition-colors"
-                          onClick={() => toggleRole(role.id)}
-                        >
-                          <div>
-                            <p className="font-medium">{role.name}</p>
-                            {role.description && (
-                              <p className="text-sm text-muted-foreground">{role.description}</p>
-                            )}
-                          </div>
-                          {formData.roleIds.includes(role.id) && (
-                            <Badge variant="default">Selected</Badge>
-                          )}
-                        </div>
-                      ))}
+                  <div className="space-y-3">
+                    <div className="p-4 border rounded-lg bg-muted/50">
+                      <p className="font-medium mb-2">
+                        {formData.employeeType === "member" ? "Employee Role" : "Department Lead Role"}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {formData.employeeType === "member" 
+                          ? "This employee will be assigned the 'Employee' role, which allows them to view their own information only."
+                          : "This employee will be assigned the 'Department Lead' role, which allows them to view their own information and all employees in their department (read-only)."}
+                      </p>
+                      {!formData.departmentId && (
+                        <p className="text-sm text-amber-600 mt-2">
+                          ⚠️ Please select a department first. Department Leads can only view employees in their assigned department.
+                        </p>
+                      )}
                     </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      No roles available. Roles can be assigned later.
-                    </p>
-                  )}
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>

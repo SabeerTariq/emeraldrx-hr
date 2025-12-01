@@ -32,7 +32,8 @@ router.post("/login", async (req, res) => {
     if (employees.length === 0) {
       return res.status(401).json({ 
         success: false, 
-        error: "Invalid email or password" 
+        error: "User not found",
+        errorCode: "USER_NOT_FOUND"
       });
     }
 
@@ -41,7 +42,8 @@ router.post("/login", async (req, res) => {
     if (!employee.isActive) {
       return res.status(403).json({ 
         success: false, 
-        error: "Account is inactive. Please contact HR." 
+        error: "Account is inactive. Please contact HR.",
+        errorCode: "ACCOUNT_INACTIVE"
       });
     }
 
@@ -51,7 +53,8 @@ router.post("/login", async (req, res) => {
     if (!isValidPassword) {
       return res.status(401).json({ 
         success: false, 
-        error: "Invalid email or password" 
+        error: "Invalid password",
+        errorCode: "INVALID_PASSWORD"
       });
     }
 

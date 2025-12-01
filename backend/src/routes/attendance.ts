@@ -46,11 +46,36 @@ const checkClockInDevice = async (req: express.Request, res: express.Response, n
  */
 router.post("/clock-in", authenticate, checkClockInDevice, async (req, res) => {
   try {
-    const { employeeId, shiftAssignmentId, notes } = req.body;
+    let { employeeId, shiftAssignmentId, notes } = req.body;
     const deviceInfo = (req as any).clockInDevice;
 
     if (!employeeId) {
       return res.status(400).json({ success: false, error: "Employee ID is required" });
+    }
+
+    // Convert string employee ID (like "EMP001") to database UUID if needed
+    if (employeeId && !employeeId.includes('-')) {
+      // It's a string employee ID, need to get the database UUID
+      const employees = await query(
+        `SELECT id FROM employees WHERE employeeId = ?`,
+        [employeeId]
+      ) as any[];
+      
+      if (employees.length === 0) {
+        return res.status(404).json({ success: false, error: "Employee not found" });
+      }
+      
+      employeeId = employees[0].id;
+    }
+
+    // Validate employee exists
+    const employeeCheck = await query(
+      `SELECT id FROM employees WHERE id = ?`,
+      [employeeId]
+    ) as any[];
+    
+    if (employeeCheck.length === 0) {
+      return res.status(404).json({ success: false, error: "Employee not found" });
     }
 
     const uuid = () => {
@@ -139,11 +164,36 @@ router.post("/clock-in", authenticate, checkClockInDevice, async (req, res) => {
  */
 router.post("/clock-out", authenticate, checkClockInDevice, async (req, res) => {
   try {
-    const { employeeId, notes } = req.body;
+    let { employeeId, notes } = req.body;
     const deviceInfo = (req as any).clockInDevice;
 
     if (!employeeId) {
       return res.status(400).json({ success: false, error: "Employee ID is required" });
+    }
+
+    // Convert string employee ID (like "EMP001") to database UUID if needed
+    if (employeeId && !employeeId.includes('-')) {
+      // It's a string employee ID, need to get the database UUID
+      const employees = await query(
+        `SELECT id FROM employees WHERE employeeId = ?`,
+        [employeeId]
+      ) as any[];
+      
+      if (employees.length === 0) {
+        return res.status(404).json({ success: false, error: "Employee not found" });
+      }
+      
+      employeeId = employees[0].id;
+    }
+
+    // Validate employee exists
+    const employeeCheck = await query(
+      `SELECT id FROM employees WHERE id = ?`,
+      [employeeId]
+    ) as any[];
+    
+    if (employeeCheck.length === 0) {
+      return res.status(404).json({ success: false, error: "Employee not found" });
     }
 
     // Find the most recent open attendance log
@@ -205,7 +255,19 @@ router.post("/clock-out", authenticate, checkClockInDevice, async (req, res) => 
  */
 router.get("/logs", authenticate, requirePermission("attendance:read"), async (req, res) => {
   try {
-    const { employeeId, startDate, endDate, departmentId } = req.query;
+    let { employeeId, startDate, endDate, departmentId } = req.query;
+
+    // Convert string employee ID to database UUID if needed
+    if (employeeId && typeof employeeId === 'string' && !employeeId.includes('-')) {
+      const employees = await query(
+        `SELECT id FROM employees WHERE employeeId = ?`,
+        [employeeId]
+      ) as any[];
+      
+      if (employees.length > 0) {
+        employeeId = employees[0].id;
+      }
+    }
 
     let sql = `
       SELECT 
@@ -373,7 +435,21 @@ router.get("/manager-review", authenticate, requirePermission("attendance:read")
  */
 router.get("/current-status/:employeeId", authenticate, requirePermission("attendance:read"), async (req, res) => {
   try {
-    const { employeeId } = req.params;
+    let { employeeId } = req.params;
+
+    // Convert string employee ID to database UUID if needed
+    if (employeeId && !employeeId.includes('-')) {
+      const employees = await query(
+        `SELECT id FROM employees WHERE employeeId = ?`,
+        [employeeId]
+      ) as any[];
+      
+      if (employees.length === 0) {
+        return res.status(404).json({ success: false, error: "Employee not found" });
+      }
+      
+      employeeId = employees[0].id;
+    }
 
     const currentLog = await query(
       `SELECT * FROM attendance_logs 

@@ -24,9 +24,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Key, Shield, Settings } from "lucide-react";
+import { Key, Shield, Settings, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { EmployeePermissionsModal } from "@/components/modals/EmployeePermissionsModal";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { hasPermission, getUserPermissions } from "@/lib/permissions";
 
 interface Employee {
   id: string;
@@ -55,7 +66,9 @@ export default function UserManagementPage() {
   const [isCredentialsDialogOpen, setIsCredentialsDialogOpen] = useState(false);
   const [isRolesDialogOpen, setIsRolesDialogOpen] = useState(false);
   const [isPermissionsDialogOpen, setIsPermissionsDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
   const [credentialsForm, setCredentialsForm] = useState<CredentialsFormData>({
     email: "",
     password: "",
@@ -63,6 +76,14 @@ export default function UserManagementPage() {
   });
   const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>([]);
   const queryClient = useQueryClient();
+
+  // Fetch user permissions
+  const { data: permissions } = useQuery({
+    queryKey: ["user-permissions"],
+    queryFn: getUserPermissions,
+  });
+
+  const canDelete = permissions && hasPermission(permissions, "employees", "delete");
 
   // Fetch employees
   const { data: employees, isLoading: employeesLoading } = useQuery<Employee[]>({
@@ -78,7 +99,9 @@ export default function UserManagementPage() {
     queryKey: ["roles"],
     queryFn: async () => {
       const response = await api.get("/roles");
-      return response.data.data;
+      const rolesData = response.data.data;
+      console.log("Fetched roles:", rolesData); // Debug log
+      return rolesData;
     },
   });
 
@@ -127,6 +150,23 @@ export default function UserManagementPage() {
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.error || "Failed to update roles");
+    },
+  });
+
+  // Delete employee mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (employeeId: string) => {
+      const response = await api.delete(`/employees/${employeeId}`);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["employees"] });
+      setIsDeleteDialogOpen(false);
+      setEmployeeToDelete(null);
+      toast.success("Employee deleted successfully");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Failed to delete employee");
     },
   });
 
@@ -288,6 +328,19 @@ export default function UserManagementPage() {
                       >
                         <Settings className="h-4 w-4" />
                       </Button>
+                      {canDelete && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setEmployeeToDelete(employee);
+                            setIsDeleteDialogOpen(true);
+                          }}
+                          title="Delete Employee"
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -469,6 +522,44 @@ export default function UserManagementPage() {
         employeeId={selectedEmployee?.id || null}
         employeeName={selectedEmployee ? `${selectedEmployee.firstName} ${selectedEmployee.lastName}` : undefined}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Employee</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{employeeToDelete?.firstName} {employeeToDelete?.lastName}</strong> ({employeeToDelete?.employeeId})?
+              <br /><br />
+              This action <strong>cannot be undone</strong>. This will permanently delete:
+              <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
+                <li>Employee record and all personal information</li>
+                <li>All assigned roles and permissions</li>
+                <li>Attendance logs and shift assignments</li>
+                <li>Leave requests and PTO balances</li>
+                <li>Training records and licenses</li>
+                <li>All other related records</li>
+              </ul>
+              <br />
+              <strong className="text-destructive">Consider deactivating the employee instead if you want to preserve historical data.</strong>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (employeeToDelete) {
+                  deleteMutation.mutate(employeeToDelete.id);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete Employee"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

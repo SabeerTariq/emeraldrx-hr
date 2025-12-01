@@ -3,16 +3,24 @@ import { query, transaction } from "../config/database.js";
 import bcrypt from "bcryptjs";
 import { authenticate } from "../middleware/auth.js";
 import { requirePermission } from "../middleware/rbac.js";
+import { getAccessibleEmployeeIds, enforceDepartmentAccess } from "../middleware/departmentAccess.js";
 
 const router = express.Router();
 
 /**
  * GET /api/employees
- * Get all employees
+ * Get all employees (filtered by department access)
+ * - Department Leads: See their own info + their department members' info
+ * - Department Members: See only their own info
+ * - Admins/HR/Managers: See all employees
  */
 router.get("/", authenticate, requirePermission("employees:read"), async (req, res) => {
   try {
-    const employees = await query(`
+    const user = (req as any).user;
+    const accessibleEmployeeIds = await getAccessibleEmployeeIds(user.id);
+
+    // Build base query
+    let sql = `
       SELECT 
         e.id,
         e.employeeId,
@@ -29,9 +37,24 @@ router.get("/", authenticate, requirePermission("employees:read"), async (req, r
       LEFT JOIN departments d ON e.departmentId = d.id
       LEFT JOIN employee_roles er ON e.id = er.employeeId
       LEFT JOIN roles r ON er.roleId = r.id
-      GROUP BY e.id
-      ORDER BY e.employeeId
-    `) as any[];
+    `;
+
+    // Apply department-based filtering if needed
+    if (accessibleEmployeeIds !== null) {
+      // null means user can view all (Admin/HR/Manager)
+      if (accessibleEmployeeIds.length === 0) {
+        // No access - return empty array
+        return res.json({ success: true, data: [] });
+      }
+      // Filter by accessible employee IDs
+      const placeholders = accessibleEmployeeIds.map(() => '?').join(',');
+      sql += ` WHERE e.id IN (${placeholders})`;
+    }
+
+    sql += ` GROUP BY e.id ORDER BY e.employeeId`;
+
+    const params = accessibleEmployeeIds !== null ? accessibleEmployeeIds : [];
+    const employees = await query(sql, params) as any[];
     
     res.json({ success: true, data: employees });
   } catch (error: any) {
@@ -41,9 +64,12 @@ router.get("/", authenticate, requirePermission("employees:read"), async (req, r
 
 /**
  * GET /api/employees/:id
- * Get single employee
+ * Get single employee (with department-based access control)
+ * - Department Leads: Can view their own info + their department members' info
+ * - Department Members: Can only view their own info
+ * - Admins/HR/Managers: Can view all employees
  */
-router.get("/:id", authenticate, requirePermission("employees:read"), async (req, res) => {
+router.get("/:id", authenticate, requirePermission("employees:read"), enforceDepartmentAccess, async (req, res) => {
   try {
     const employee = await query(`
       SELECT 
@@ -153,6 +179,8 @@ router.put("/:id", authenticate, requirePermission("employees:update"), async (r
       departmentId,
       designation,
       password,
+      terminationDate,
+      isActive,
     } = req.body;
 
     const updateFields: string[] = [];
@@ -201,6 +229,14 @@ router.put("/:id", authenticate, requirePermission("employees:update"), async (r
     if (designation !== undefined) {
       updateFields.push("designation = ?");
       params.push(designation);
+    }
+    if (terminationDate !== undefined) {
+      updateFields.push("terminationDate = ?");
+      params.push(terminationDate || null);
+    }
+    if (isActive !== undefined) {
+      updateFields.push("isActive = ?");
+      params.push(isActive ? 1 : 0);
     }
     if (password) {
       const hashedPassword = await bcrypt.hash(password, 10);
@@ -462,6 +498,53 @@ router.delete("/:id/permissions", authenticate, requirePermission("employees:upd
     
     res.json({ success: true });
   } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * DELETE /api/employees/:id
+ * Delete employee (Admin only)
+ * This will cascade delete all related records (roles, attendance, leave requests, etc.)
+ */
+router.delete("/:id", authenticate, requirePermission("employees:delete"), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Check if employee exists
+    const employee = await query(
+      `SELECT id, employeeId, firstName, lastName FROM employees WHERE id = ?`,
+      [id]
+    ) as any[];
+
+    if (employee.length === 0) {
+      return res.status(404).json({ success: false, error: "Employee not found" });
+    }
+
+    // Check if trying to delete self (prevent self-deletion)
+    const user = (req as any).user;
+    if (user.id === id) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "You cannot delete your own account. Please ask another admin to do it." 
+      });
+    }
+
+    // Delete employee (cascade will handle related records)
+    await query(`DELETE FROM employees WHERE id = ?`, [id]);
+
+    res.json({ 
+      success: true, 
+      message: `Employee ${employee[0].firstName} ${employee[0].lastName} (${employee[0].employeeId}) has been deleted successfully.` 
+    });
+  } catch (error: any) {
+    // Check for foreign key constraint errors
+    if (error.code === 'ER_ROW_IS_REFERENCED_2' || error.code === '23000') {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Cannot delete employee. There are related records that prevent deletion. Please deactivate the employee instead." 
+      });
+    }
     res.status(500).json({ success: false, error: error.message });
   }
 });
